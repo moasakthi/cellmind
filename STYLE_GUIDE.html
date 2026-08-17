@@ -1,0 +1,597 @@
+<title>CellMind Design System</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --paper:#F3F5F6; --paper-raised:#FFFFFF;
+    --ink:#0A0E13; --ink-soft:#3C4650; --ink-mute:#6B7680;
+    --line:#D6DCE1; --line-soft:#E6EAED;
+    --accent:#0E8F85; --accent-soft:#DEF4F1; --accent-ink:#07443F;
+    --furnace:#B75E17; --furnace-soft:#FBE7D3; --furnace-ink:#5C2E0B;
+    --danger:#B23327; --danger-soft:#FBE1DD; --danger-ink:#5C1B14;
+    --good:#2A7A50; --good-soft:#E1F1E7; --good-ink:#153F29;
+    --radius-sm:3px; --radius-md:6px;
+    --shadow-1:0 1px 2px rgba(10,14,19,.08);
+    --shadow-2:0 8px 28px rgba(10,14,19,.16);
+    --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+    --motion-fast:120ms; --motion-base:220ms; --motion-reveal:450ms; --motion-hero:650ms;
+    --ease-out:cubic-bezier(.16,1,.3,1); --ease-in:cubic-bezier(.7,0,.84,0);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .reveal{transition:none !important; opacity:1 !important; transform:none !important;}
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0A0E13; --paper-raised:#121920;
+      --ink:#EDF1F3; --ink-soft:#B7C0C7; --ink-mute:#7C8790;
+      --line:#232B33; --line-soft:#1B222A;
+      --accent:#49D9CB; --accent-soft:#102E2B; --accent-ink:#9CEEE4;
+      --furnace:#EE9C4C; --furnace-soft:#2E2011; --furnace-ink:#F7C58C;
+      --danger:#EC6B5C; --danger-soft:#301715; --danger-ink:#F5A99C;
+      --good:#57C182; --good-soft:#12291B; --good-ink:#9CE0B7;
+      --shadow-1:0 1px 2px rgba(0,0,0,.5); --shadow-2:0 8px 28px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0A0E13; --paper-raised:#121920;
+    --ink:#EDF1F3; --ink-soft:#B7C0C7; --ink-mute:#7C8790;
+    --line:#232B33; --line-soft:#1B222A;
+    --accent:#49D9CB; --accent-soft:#102E2B; --accent-ink:#9CEEE4;
+    --furnace:#EE9C4C; --furnace-soft:#2E2011; --furnace-ink:#F7C58C;
+    --danger:#EC6B5C; --danger-soft:#301715; --danger-ink:#F5A99C;
+    --good:#57C182; --good-soft:#12291B; --good-ink:#9CE0B7;
+    --shadow-1:0 1px 2px rgba(0,0,0,.5); --shadow-2:0 8px 28px rgba(0,0,0,.55);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:var(--font-ui); font-size:15px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);}
+  .tabular{font-variant-numeric:tabular-nums;}
+  code, .mono{font-family:var(--font-mono);}
+
+  /* ---- shell ---- */
+  .shell{display:grid; grid-template-columns:240px 1fr; min-height:100vh;}
+  @media (max-width:860px){ .shell{grid-template-columns:1fr;} .nav{display:none;} }
+
+  .nav{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    border-right:1px solid var(--line); padding:20px 14px;
+    display:flex; flex-direction:column; gap:18px;
+  }
+  .nav .brand{display:flex; align-items:baseline; gap:8px; padding:0 8px 8px;}
+  .nav .brand b{font-size:15px; letter-spacing:.01em;}
+  .nav .brand span{font-family:var(--font-mono); font-size:11px; color:var(--ink-mute);}
+  .nav-group-title{
+    font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-mute);
+    padding:0 8px; margin-bottom:6px;
+  }
+  .nav a{
+    display:block; padding:6px 8px; border-radius:var(--radius-sm); color:var(--ink-soft);
+    text-decoration:none; font-size:13.5px;
+  }
+  .nav a:hover{background:var(--line-soft); color:var(--ink);}
+
+  .main{padding:36px 44px 120px; max-width:980px;}
+  @media (max-width:640px){ .main{padding:24px 18px 90px;} }
+
+  .page-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px;}
+  .page-head h1{font-size:28px; margin:0 0 6px; letter-spacing:-.01em; text-wrap:balance;}
+  .page-head p{margin:0; color:var(--ink-soft); max-width:62ch;}
+  .theme-toggle{
+    border:1px solid var(--line); background:var(--paper-raised); color:var(--ink);
+    border-radius:var(--radius-md); padding:7px 12px; font:12.5px var(--font-mono);
+    cursor:pointer; white-space:nowrap;
+  }
+  .theme-toggle:hover{border-color:var(--accent);}
+
+  section{margin-top:56px; padding-top:8px; border-top:1px solid var(--line-soft);}
+  section:first-of-type{border-top:none;}
+  section h2{font-size:20px; margin:0 0 4px;}
+  .section-note{color:var(--ink-mute); margin:0 0 22px; max-width:64ch;}
+  h3.sub{font-size:14px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-mute); margin:30px 0 14px;}
+
+  .grid{display:grid; gap:14px;}
+  .cols-2{grid-template-columns:repeat(2,1fr);}
+  .cols-3{grid-template-columns:repeat(3,1fr);}
+  .cols-4{grid-template-columns:repeat(4,1fr);}
+  @media (max-width:700px){ .cols-2,.cols-3,.cols-4{grid-template-columns:1fr 1fr;} }
+
+  /* ---- color swatches ---- */
+  .swatch{border:1px solid var(--line); border-radius:var(--radius-md); overflow:hidden; background:var(--paper-raised);}
+  .swatch .fill{height:64px;}
+  .swatch .meta{padding:10px 12px;}
+  .swatch .meta b{display:block; font-size:13px;}
+  .swatch .meta span{display:block; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-mute); margin-top:2px;}
+  .swatch .meta p{margin:6px 0 0; font-size:12.5px; color:var(--ink-soft);}
+
+  /* ---- type samples ---- */
+  .type-row{display:flex; align-items:baseline; gap:18px; padding:12px 0; border-bottom:1px solid var(--line-soft);}
+  .type-row:last-child{border-bottom:none;}
+  .type-row .label{width:88px; flex:none; font:11px var(--font-mono); color:var(--ink-mute); text-transform:uppercase; letter-spacing:.04em;}
+  .type-row .sample{flex:1; text-wrap:balance;}
+
+  /* ---- spacing ---- */
+  .space-row{display:flex; align-items:center; gap:14px; padding:8px 0;}
+  .space-row .bar{background:var(--accent); height:14px; border-radius:2px;}
+  .space-row .tag{width:48px; flex:none; font:12px var(--font-mono); color:var(--ink-mute);}
+
+  /* ---- buttons ---- */
+  .btn{
+    font-family:var(--font-ui); font-size:13.5px; font-weight:600; border-radius:var(--radius-sm);
+    padding:8px 14px; border:1px solid transparent; cursor:pointer; line-height:1;
+  }
+  .btn-primary{background:var(--accent); color:var(--paper); }
+  .btn-secondary{background:transparent; border-color:var(--line); color:var(--ink);}
+  .btn-ghost{background:transparent; color:var(--ink-soft);}
+  .btn-danger{background:var(--danger); color:#fff;}
+  .btn[disabled]{opacity:.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+
+  /* ---- badges / chips ---- */
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; font:11.5px var(--font-mono); font-weight:600;
+    padding:3px 9px; border-radius:100px; letter-spacing:.01em; white-space:nowrap;
+  }
+  .chip.dot::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor;}
+  .chip-good{background:var(--good-soft); color:var(--good-ink);}
+  .chip-warn{background:var(--furnace-soft); color:var(--furnace-ink);}
+  .chip-bad{background:var(--danger-soft); color:var(--danger-ink);}
+  .chip-info{background:var(--accent-soft); color:var(--accent-ink);}
+  .chip-neutral{background:var(--line-soft); color:var(--ink-soft);}
+  .chip-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .chip-demo{display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line-soft);}
+  .chip-demo:last-child{border-bottom:none;}
+  .chip-demo .usage{font-size:12.5px; color:var(--ink-mute);}
+
+  /* ---- cards ---- */
+  .card{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-md); padding:16px;}
+  .kpi-card .kpi-label{font:11px var(--font-mono); text-transform:uppercase; letter-spacing:.05em; color:var(--ink-mute);}
+  .kpi-card .kpi-value{font-size:26px; font-weight:700; margin:4px 0; font-family:var(--font-mono);}
+  .kpi-card .kpi-delta{font-size:12px;}
+  .evidence-card{display:flex; gap:10px; align-items:flex-start;}
+  .evidence-card .src{font:11px var(--font-mono); color:var(--ink-mute); flex:none; width:96px;}
+
+  /* ---- table ---- */
+  .table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-md);}
+  table{width:100%; border-collapse:collapse; font-size:13px; min-width:520px;}
+  th{text-align:left; font:11px var(--font-mono); text-transform:uppercase; letter-spacing:.04em; color:var(--ink-mute); padding:10px 14px; border-bottom:1px solid var(--line); background:var(--line-soft);}
+  td{padding:10px 14px; border-bottom:1px solid var(--line-soft);}
+  tr:last-child td{border-bottom:none;}
+
+  /* ---- forms ---- */
+  .field{display:flex; flex-direction:column; gap:6px; max-width:280px;}
+  .field label{font-size:12px; color:var(--ink-soft); font-weight:600;}
+  .field input, .field select{
+    font-family:var(--font-ui); font-size:13.5px; padding:8px 10px; border:1px solid var(--line);
+    border-radius:var(--radius-sm); background:var(--paper-raised); color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .btn:focus-visible, .nav a:focus-visible{
+    outline:2px solid var(--accent); outline-offset:1px;
+  }
+  .switch{display:inline-flex; align-items:center; gap:8px; font-size:13px;}
+  .switch .track{width:34px; height:18px; border-radius:100px; background:var(--line); position:relative; flex:none;}
+  .switch .track.on{background:var(--accent);}
+  .switch .track::after{content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--paper-raised); transition:left .15s;}
+  .switch .track.on::after{left:18px;}
+  .dropzone{border:1.5px dashed var(--line); border-radius:var(--radius-md); padding:22px; text-align:center; color:var(--ink-mute); font-size:12.5px;}
+
+  /* ---- nav sample ---- */
+  .navsample{border:1px solid var(--line); border-radius:var(--radius-md); background:var(--paper-raised); width:190px; padding:10px; font-size:13px;}
+  .navsample .item{padding:7px 8px; border-radius:var(--radius-sm); color:var(--ink-soft); margin-bottom:2px;}
+  .navsample .item.active{background:var(--accent-soft); color:var(--accent-ink); font-weight:600;}
+
+  /* ---- alerts ---- */
+  .alert{border-radius:var(--radius-md); padding:12px 14px; font-size:13px; border:1px solid; display:flex; gap:10px;}
+  .alert b{display:block; margin-bottom:2px;}
+  .alert-warn{background:var(--furnace-soft); border-color:var(--furnace); color:var(--furnace-ink);}
+  .alert-bad{background:var(--danger-soft); border-color:var(--danger); color:var(--danger-ink);}
+  .alert-info{background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink);}
+
+  /* ---- stepper ---- */
+  .stepper{display:flex; gap:0; overflow-x:auto;}
+  .step{flex:1; min-width:118px; text-align:center; position:relative; padding-top:26px;}
+  .step .node{position:absolute; top:0; left:50%; transform:translateX(-50%); width:16px; height:16px; border-radius:50%; border:2px solid var(--line); background:var(--paper-raised); z-index:1;}
+  .step .line{position:absolute; top:7px; left:0; right:0; height:2px; background:var(--line); z-index:0;}
+  .step:first-child .line{left:50%;}
+  .step:last-child .line{right:50%;}
+  .step.done .node{background:var(--good); border-color:var(--good);}
+  .step.done .line{background:var(--good);}
+  .step.active .node{background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft);}
+  .step.failed .node{background:var(--danger); border-color:var(--danger);}
+  .step .name{font-size:11.5px; margin-top:8px; color:var(--ink-soft);}
+  .step.active .name{color:var(--ink); font-weight:600;}
+
+  /* ---- confidence meter ---- */
+  .meter{display:flex; flex-direction:column; gap:6px; max-width:320px;}
+  .meter .track{height:8px; border-radius:100px; background:var(--line-soft); overflow:hidden;}
+  .meter .fill{height:100%; border-radius:100px;}
+  .meter .label{display:flex; justify-content:space-between; font:12px var(--font-mono); color:var(--ink-mute);}
+
+  /* ---- modal mock ---- */
+  .modal-mock{border:1px solid var(--line); border-radius:var(--radius-md); background:var(--paper-raised); box-shadow:var(--shadow-2); max-width:420px; padding:0; overflow:hidden;}
+  .modal-mock .m-head{padding:14px 16px; border-bottom:1px solid var(--line-soft); font-weight:700; font-size:14px;}
+  .modal-mock .m-body{padding:16px; font-size:13px; color:var(--ink-soft); display:flex; flex-direction:column; gap:10px;}
+  .modal-mock .m-foot{padding:12px 16px; border-top:1px solid var(--line-soft); display:flex; justify-content:flex-end; gap:8px;}
+
+  .dodont{border-radius:var(--radius-md); padding:14px; font-size:13px;}
+  .do{background:var(--good-soft); color:var(--good-ink);}
+  .dont{background:var(--danger-soft); color:var(--danger-ink);}
+  .dodont b{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px;}
+
+  /* ---- motion demo ---- */
+  .motion-token-row{display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line-soft); font-size:13px;}
+  .motion-token-row:last-child{border-bottom:none;}
+  .motion-token-row .bar{height:6px; border-radius:100px; background:var(--accent); }
+  .reveal{opacity:0; transform:translateY(18px); transition:opacity var(--motion-reveal) var(--ease-out), transform var(--motion-reveal) var(--ease-out);}
+  .reveal.in{opacity:1; transform:translateY(0);}
+  .reveal-demo{display:flex; gap:12px; flex-wrap:wrap;}
+  .reveal-demo .card{flex:1; min-width:150px;}
+  .replay-btn{font:11.5px var(--font-mono); border:1px solid var(--line); background:var(--paper-raised); color:var(--ink-soft); border-radius:var(--radius-sm); padding:6px 10px; cursor:pointer; margin-top:12px;}
+  .replay-btn:hover{border-color:var(--accent); color:var(--ink);}
+  .press{transition:transform var(--motion-fast) var(--ease-out);}
+  .press:active{transform:scale(.97);}
+</style>
+
+<div class="shell">
+  <nav class="nav">
+    <div class="brand"><b>CellMind</b><span>DESIGN SYSTEM</span></div>
+
+    <div>
+      <div class="nav-group-title">Foundations</div>
+      <a href="#color">Color</a>
+      <a href="#type">Typography</a>
+      <a href="#spacing">Spacing &amp; Layout</a>
+      <a href="#shape">Elevation &amp; Shape</a>
+    </div>
+    <div>
+      <div class="nav-group-title">Components</div>
+      <a href="#buttons">Buttons</a>
+      <a href="#status">Status &amp; Badges</a>
+      <a href="#cards">Cards</a>
+      <a href="#tables">Tables</a>
+      <a href="#forms">Forms</a>
+      <a href="#navigation">Navigation</a>
+      <a href="#alerts">Alerts &amp; Banners</a>
+      <a href="#stepper">Agent Pipeline Stepper</a>
+      <a href="#meter">Confidence Meter</a>
+      <a href="#modal">Approval Modal</a>
+    </div>
+    <div>
+      <div class="nav-group-title">Patterns</div>
+      <a href="#a11y">Accessibility</a>
+      <a href="#motion">Motion</a>
+      <a href="#dodont">Do / Don't</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>CellMind Design System</h1>
+        <p>Tokens and components for the manufacturing-intelligence dashboard defined in DDD.MD. Grounded in the subject: the deep blue-black of a darkened EL inspection chamber, the glow of electroluminescence itself, and furnace-amber for anything that needs an engineer's attention.</p>
+      </div>
+      <button class="theme-toggle" id="themeToggle" type="button">◐ Toggle theme</button>
+    </div>
+
+    <section id="color">
+      <h2>Color</h2>
+      <p class="section-note">One accent, not a rainbow. <b>Accent</b> marks interactive/informational elements; <b>furnace</b>, <b>danger</b> and <b>good</b> are semantic only — they report state and are never used as decoration.</p>
+
+      <h3 class="sub">Ground &amp; Ink</h3>
+      <div class="grid cols-4">
+        <div class="swatch"><div class="fill" style="background:var(--paper)"></div><div class="meta"><b>Paper</b><span>--paper</span><p>Page ground. Cool-neutral, not pure white — pairs with the teal accent without competing.</p></div></div>
+        <div class="swatch"><div class="fill" style="background:var(--paper-raised)"></div><div class="meta"><b>Paper Raised</b><span>--paper-raised</span><p>Cards, tables, inputs — one step above the page ground.</p></div></div>
+        <div class="swatch"><div class="fill" style="background:var(--ink)"></div><div class="meta"><b>Ink</b><span>--ink</span><p>Primary text. Near-black with a cold undertone — the color of a wafer under low light.</p></div></div>
+        <div class="swatch"><div class="fill" style="background:var(--ink-mute)"></div><div class="meta"><b>Ink Mute</b><span>--ink-mute</span><p>Captions, timestamps, secondary metadata.</p></div></div>
+      </div>
+
+      <h3 class="sub">Accent — EL Glow</h3>
+      <div class="grid cols-3">
+        <div class="swatch"><div class="fill" style="background:var(--accent)"></div><div class="meta"><b>Accent</b><span>--accent</span><p>Links, active nav, primary actions, selected states — the cyan-teal glow of an electroluminescence image.</p></div></div>
+        <div class="swatch"><div class="fill" style="background:var(--accent-soft)"></div><div class="meta"><b>Accent Soft</b><span>--accent-soft</span><p>Info badge/banner fill.</p></div></div>
+        <div class="swatch"><div class="fill" style="background:var(--accent-ink)"></div><div class="meta"><b>Accent Ink</b><span>--accent-ink</span><p>Text set on Accent Soft.</p></div></div>
+      </div>
+
+      <h3 class="sub">Semantic — Furnace / Danger / Good</h3>
+      <div class="grid cols-3">
+        <div class="swatch"><div class="fill" style="background:var(--furnace)"></div><div class="meta"><b>Furnace</b><span>--furnace</span><p>Medium-severity, warnings, needs-review — named for the F07 firing furnace, the BRD's own recurring defect source.</p></div></div>
+        <div class="swatch"><div class="fill" style="background:var(--danger)"></div><div class="meta"><b>Danger</b><span>--danger</span><p>High severity, conflicts, offline/failed states, destructive actions.</p></div></div>
+        <div class="swatch"><div class="fill" style="background:var(--good)"></div><div class="meta"><b>Good</b><span>--good</span><p>Healthy yield, approved, online, passed holdout evaluation.</p></div></div>
+      </div>
+    </section>
+
+    <section id="type">
+      <h2>Typography</h2>
+      <p class="section-note">Two roles, both system-native by design: an OS-native UI face keeps a data-dense control-room dashboard fast and legible at small sizes — the same reasoning real SCADA/HMI software uses — and a monospace face is reserved for anything that is read as data: IDs, timestamps, percentages, code.</p>
+
+      <h3 class="sub">Scale — UI face</h3>
+      <div class="type-row"><span class="label">32 / 700</span><span class="sample" style="font-size:32px;font-weight:700;">Batch B1847 flagged for review</span></div>
+      <div class="type-row"><span class="label">20 / 700</span><span class="sample" style="font-size:20px;font-weight:700;">Furnace F07 firing-process variation</span></div>
+      <div class="type-row"><span class="label">15 / 400</span><span class="sample" style="font-size:15px;">73% of defective cells trace back to Furnace F07, well above its historical baseline.</span></div>
+      <div class="type-row"><span class="label">13 / 600</span><span class="sample" style="font-size:13px;font-weight:600;">Approve corrective action</span></div>
+      <div class="type-row"><span class="label">11 eyebrow</span><span class="sample" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);">Probable Contributing Factor</span></div>
+
+      <h3 class="sub">Mono face — data &amp; identifiers</h3>
+      <div class="type-row"><span class="label">Batch ID</span><span class="sample mono">B1847</span></div>
+      <div class="type-row"><span class="label">Confidence</span><span class="sample mono">91.0%</span></div>
+      <div class="type-row"><span class="label">Timestamp</span><span class="sample mono">2026-08-13T10:42:03Z</span></div>
+      <div class="type-row"><span class="label">Req. ID</span><span class="sample mono">FR-05 · BR-10</span></div>
+    </section>
+
+    <section id="spacing">
+      <h2>Spacing &amp; Layout</h2>
+      <p class="section-note">A single 4px-rooted scale. Gaps come from flex/grid <code>gap</code>, never stacked margins.</p>
+      <div>
+        <div class="space-row"><span class="tag">4</span><span class="bar" style="width:4px"></span></div>
+        <div class="space-row"><span class="tag">8</span><span class="bar" style="width:8px"></span></div>
+        <div class="space-row"><span class="tag">12</span><span class="bar" style="width:12px"></span></div>
+        <div class="space-row"><span class="tag">16</span><span class="bar" style="width:16px"></span></div>
+        <div class="space-row"><span class="tag">24</span><span class="bar" style="width:24px"></span></div>
+        <div class="space-row"><span class="tag">32</span><span class="bar" style="width:32px"></span></div>
+        <div class="space-row"><span class="tag">48</span><span class="bar" style="width:48px"></span></div>
+      </div>
+    </section>
+
+    <section id="shape">
+      <h2>Elevation &amp; Shape</h2>
+      <p class="section-note">Small radii and hairline borders read as instrumentation, not a consumer app — shadow is used sparingly, only to lift a modal off the page.</p>
+      <div class="grid cols-3">
+        <div class="card" style="border-radius:var(--radius-sm);"><b>radius-sm · 3px</b><p class="section-note" style="margin-top:6px;">Inputs, buttons, chips</p></div>
+        <div class="card" style="border-radius:var(--radius-md);"><b>radius-md · 6px</b><p class="section-note" style="margin-top:6px;">Cards, tables, modals</p></div>
+        <div class="card" style="box-shadow:var(--shadow-2);"><b>shadow-2</b><p class="section-note" style="margin-top:6px;">Modals &amp; popovers only</p></div>
+      </div>
+    </section>
+
+    <section id="buttons">
+      <h2>Buttons</h2>
+      <p class="section-note">Every button names the action it performs — "Approve", not "Submit".</p>
+      <div class="btn-row">
+        <button class="btn btn-primary">Approve action</button>
+        <button class="btn btn-secondary">Modify</button>
+        <button class="btn btn-ghost">View evidence</button>
+        <button class="btn btn-danger">Reject</button>
+        <button class="btn btn-primary" disabled>Approve action</button>
+      </div>
+    </section>
+
+    <section id="status">
+      <h2>Status &amp; Badges</h2>
+      <p class="section-note">Every AI-facing state in the BRD (FR-14 confidence, taxonomy severity, camera health, autonomy level) renders through this one chip component — state is never conveyed by color alone; the label always says the word too.</p>
+
+      <h3 class="sub">Confidence (FR-14)</h3>
+      <div class="chip-row" style="margin-bottom:6px;">
+        <span class="chip dot chip-good">HIGH · 91%</span>
+        <span class="chip dot chip-warn">MEDIUM · 62%</span>
+        <span class="chip dot chip-bad">LOW · 24%</span>
+        <span class="chip dot chip-neutral">CONFLICTING</span>
+      </div>
+
+      <h3 class="sub">Severity (Taxonomy, FR-21)</h3>
+      <div class="chip-row" style="margin-bottom:6px;">
+        <span class="chip chip-neutral">LOW</span>
+        <span class="chip chip-warn">MEDIUM</span>
+        <span class="chip chip-bad">HIGH</span>
+      </div>
+
+      <h3 class="sub">Camera Stream Health (FR-18)</h3>
+      <div class="chip-row" style="margin-bottom:6px;">
+        <span class="chip dot chip-good">ONLINE</span>
+        <span class="chip dot chip-warn">DEGRADED</span>
+        <span class="chip dot chip-bad">OFFLINE</span>
+      </div>
+
+      <h3 class="sub">Autonomy Level (FR-20)</h3>
+      <div class="chip-row">
+        <span class="chip chip-info">LEVEL A · RECOMMEND-ONLY</span>
+        <span class="chip chip-info">LEVEL B · AUTO-SUGGEST</span>
+        <span class="chip chip-neutral" title="Gated — see FR-20 sign-off criteria">LEVEL C · LOCKED</span>
+      </div>
+    </section>
+
+    <section id="cards">
+      <h2>Cards</h2>
+      <h3 class="sub">KPI card</h3>
+      <div class="grid cols-3">
+        <div class="card kpi-card">
+          <div class="kpi-label">Yield</div>
+          <div class="kpi-value tabular">91.6%</div>
+          <div class="kpi-delta" style="color:var(--danger-ink);">▼ 2.1 pts vs. last batch</div>
+        </div>
+        <div class="card kpi-card">
+          <div class="kpi-label">Defect rate</div>
+          <div class="kpi-value tabular">8.4%</div>
+          <div class="kpi-delta" style="color:var(--furnace-ink);">▲ driven by F07</div>
+        </div>
+        <div class="card kpi-card">
+          <div class="kpi-label">Active alerts</div>
+          <div class="kpi-value tabular">3</div>
+          <div class="kpi-delta" style="color:var(--ink-mute);">1 high severity</div>
+        </div>
+      </div>
+
+      <h3 class="sub">Evidence card</h3>
+      <div class="card evidence-card">
+        <span class="src mono">HISTORICAL</span>
+        <div><b style="font-size:13px;">Similar incident found in Batch B1632</b><p class="section-note" style="margin:4px 0 0;">Recorded corrective action was Furnace F07 calibration.</p></div>
+      </div>
+    </section>
+
+    <section id="tables">
+      <h2>Tables</h2>
+      <p class="section-note">Numeric columns are monospace and right-set with <code>tabular-nums</code> so digits line up down the column.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Batch</th><th>Line</th><th>Yield</th><th>Defect rate</th><th>Risk</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">B1847</td><td>L2</td><td class="mono tabular">91.6%</td><td class="mono tabular">8.4%</td><td><span class="chip chip-bad">HIGH</span></td></tr>
+            <tr><td class="mono">B1846</td><td>L2</td><td class="mono tabular">97.2%</td><td class="mono tabular">2.8%</td><td><span class="chip chip-neutral">LOW</span></td></tr>
+            <tr><td class="mono">B1845</td><td>L1</td><td class="mono tabular">95.0%</td><td class="mono tabular">5.0%</td><td><span class="chip chip-warn">MEDIUM</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="forms">
+      <h2>Forms</h2>
+      <div class="grid cols-3">
+        <div class="field"><label for="lineSel">Production line</label><select id="lineSel"><option>Line 2 — L2</option><option>Line 1 — L1</option></select></div>
+        <div class="field"><label for="camId">Camera ID</label><input id="camId" value="CAM-EL-07" /></div>
+        <div class="field"><label>Autonomy level</label><span class="switch"><span class="track on"></span> Level B — Auto-suggest</span></div>
+      </div>
+      <h3 class="sub">Frame / image intake</h3>
+      <div class="dropzone" style="max-width:320px;">Drop an EL image, or select a registered camera stream</div>
+    </section>
+
+    <section id="navigation">
+      <h2>Navigation</h2>
+      <p class="section-note">The product's own sidebar uses the same active/hover states as this design system's nav.</p>
+      <div class="navsample">
+        <div class="item active">Investigation</div>
+        <div class="item">Recommendations</div>
+        <div class="item">Cameras</div>
+        <div class="item">Retraining</div>
+        <div class="item">Taxonomy</div>
+        <div class="item">RBAC &amp; Audit</div>
+      </div>
+    </section>
+
+    <section id="alerts">
+      <h2>Alerts &amp; Banners</h2>
+      <div class="grid" style="gap:10px;">
+        <div class="alert alert-bad">💬<div><b>Evidence conflict detected</b>EL image indicates high defect probability; process data is within baseline. Additional inspection recommended. (FR-17)</div></div>
+        <div class="alert alert-warn">💬<div><b>Root-cause confidence reduced</b>Firing telemetry is unavailable for this batch. (FR-16 / BR-03)</div></div>
+        <div class="alert alert-info">💬<div><b>Unknown defect pattern detected</b>This image is unlike the training distribution. Manual inspection required. (FR-15)</div></div>
+      </div>
+    </section>
+
+    <section id="stepper">
+      <h2>Agent Pipeline Stepper</h2>
+      <p class="section-note">Shows Agent Hub's live investigation state (DDD §4).</p>
+      <div class="stepper">
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Inspection</span></div>
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Process</span></div>
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Context</span></div>
+        <div class="step active"><span class="line"></span><span class="node"></span><span class="name">Root Cause</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Optimization</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Simulation</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Validation</span></div>
+      </div>
+    </section>
+
+    <section id="meter">
+      <h2>Confidence Meter</h2>
+      <div class="grid cols-2">
+        <div class="meter"><div class="label"><span>Confidence</span><span class="tabular">91%</span></div><div class="track"><div class="fill" style="width:91%;background:var(--good);"></div></div></div>
+        <div class="meter"><div class="label"><span>Confidence</span><span class="tabular">48%</span></div><div class="track"><div class="fill" style="width:48%;background:var(--furnace);"></div></div></div>
+      </div>
+    </section>
+
+    <section id="modal">
+      <h2>Approval Modal</h2>
+      <p class="section-note">Approval dialogs always name the two humans involved, enforcing BR-10 (requester ≠ approver) visibly, not just at the API layer.</p>
+      <div class="modal-mock">
+        <div class="m-head">Approve retraining promotion</div>
+        <div class="m-body">
+          <div>Model v2.4 → v2.5 · Holdout F1 0.93 vs. baseline 0.91</div>
+          <div>Requested by <b class="mono">Q. Nair</b> (Quality Engineer)</div>
+          <div class="alert alert-info" style="padding:8px 10px;">You are signed in as <b class="mono">J. Alvarez</b> (ML Operations Lead) — a different user, satisfying BR-10.</div>
+        </div>
+        <div class="m-foot"><button class="btn btn-secondary">Reject</button><button class="btn btn-primary">Approve promotion</button></div>
+      </div>
+    </section>
+
+    <section id="a11y">
+      <h2>Accessibility</h2>
+      <ul class="section-note">
+        <li>State is never color-only: every chip in <a href="#status">Status &amp; Badges</a> carries a text label.</li>
+        <li>All interactive elements show a visible focus ring (<code>outline</code> in the accent color) — see any button or field above via keyboard Tab.</li>
+        <li>Body text targets ≥4.5:1 contrast against its surface in both themes; large numerals (KPI values) target ≥3:1.</li>
+      </ul>
+    </section>
+
+    <section id="motion">
+      <h2>Motion</h2>
+      <p class="section-note">Two motion budgets, not one. The <b>product UI</b> (this dashboard, admin consoles) keeps motion restrained and purely functional — an engineer scanning a dense batch table shouldn't compete with decoration. The <b>public landing page</b> is an editorial surface aimed at prospects and hackathon judges, where motion is the pitch's pacing device. Both are implemented in <span class="mono">Framer Motion</span>; the landing page additionally uses <span class="mono">React Bits</span> for decorative primitives (ambient glow, spotlight hover). See DDD.MD §16.1 for the full specification.</p>
+
+      <h3 class="sub">Tokens</h3>
+      <div class="motion-token-row"><span class="mono">--motion-fast</span><span>120ms — press/hover feedback</span></div>
+      <div class="motion-token-row"><span class="mono">--motion-base</span><span>220ms — state transitions (chip color, meter fill)</span></div>
+      <div class="motion-token-row"><span class="mono">--motion-reveal</span><span>450ms — product-UI scroll entrance (single elements only)</span></div>
+      <div class="motion-token-row"><span class="mono">--motion-hero</span><span>650ms — landing-page hero sequence, per step</span></div>
+      <div class="motion-token-row"><span class="mono">--ease-out / --ease-in</span><span>cubic-bezier(.16,1,.3,1) / (.7,0,.84,0) — exits run ~65% of the matching entrance</span></div>
+
+      <h3 class="sub">Live demo — scroll / stagger reveal</h3>
+      <p class="section-note">Scroll this out of view and back, or press Replay. Each card enters on <span class="mono">--motion-reveal</span> with an 80ms stagger — the same choreography specified for landing-page sections via Framer Motion's <span class="mono">staggerChildren</span> (DDD §16.1.2).</p>
+      <div class="reveal-demo" id="revealDemo">
+        <div class="card reveal"><b style="font-size:13px;">01 · Detect</b><p class="section-note" style="margin:4px 0 0;">EL inspection flags Cell C392.</p></div>
+        <div class="card reveal"><b style="font-size:13px;">02 · Trace</b><p class="section-note" style="margin:4px 0 0;">73% of defects trace to F07.</p></div>
+        <div class="card reveal"><b style="font-size:13px;">03 · Explain</b><p class="section-note" style="margin:4px 0 0;">Evidence + confidence shown.</p></div>
+      </div>
+      <button class="replay-btn press" id="replayBtn" type="button">↻ Replay</button>
+
+      <h3 class="sub">Framer Motion / React Bits mapping</h3>
+      <ul class="section-note">
+        <li><b>Product UI</b> — <span class="mono">layout</span> prop for list reordering, <span class="mono">AnimatePresence</span> for modal enter/exit only. Meter fills and stepper nodes animate via plain CSS transition, not a library — single-property changes don't need one.</li>
+        <li><b>Landing page</b> — <span class="mono">variants</span> + <span class="mono">whileInView</span> (never <span class="mono">animate</span> on mount, so nothing above the fold competes at once); React Bits supplies the hero's animated text treatment, card spotlight-hover, and ambient background glow — all decorative, all no-op under reduced motion.</li>
+      </ul>
+      <p class="section-note">All motion — tokens, the demo above, and every Framer Motion/React Bits usage — is disabled outright (not shortened) under <code>prefers-reduced-motion: reduce</code>, since none of it carries information a static state change wouldn't.</p>
+    </section>
+
+    <section id="dodont">
+      <h2>Do / Don't</h2>
+      <div class="grid cols-2">
+        <div class="dodont do"><b>Do</b>Pair every status chip with its plain-language state (e.g. "HIGH · 91%"), per FR-14.</div>
+        <div class="dodont dont"><b>Don't</b>Use the furnace-amber or danger-red hues for anything decorative — they are reserved for real severity/warning states.</div>
+        <div class="dodont do"><b>Do</b>Use mono for anything the operator will scan as data: IDs, timestamps, percentages.</div>
+        <div class="dodont dont"><b>Don't</b>Introduce a second accent hue — one accent keeps "what's interactive" unambiguous.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  (function(){
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var current = null;
+    btn.addEventListener('click', function(){
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var effectiveIsDark = current ? current === 'dark' : prefersDark;
+      current = effectiveIsDark ? 'light' : 'dark';
+      root.setAttribute('data-theme', current);
+    });
+  })();
+
+  (function(){
+    var cards = Array.prototype.slice.call(document.querySelectorAll('#revealDemo .reveal'));
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function play(){
+      cards.forEach(function(el){ el.classList.remove('in'); });
+      if(reduceMotion){ cards.forEach(function(el){ el.classList.add('in'); }); return; }
+      cards.forEach(function(el, i){
+        setTimeout(function(){ el.classList.add('in'); }, i * 80);
+      });
+    }
+
+    if(!reduceMotion && 'IntersectionObserver' in window){
+      var seen = false;
+      var obs = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if(entry.isIntersecting && !seen){ seen = true; play(); }
+          if(!entry.isIntersecting){ seen = false; }
+        });
+      }, { threshold: 0.4 });
+      obs.observe(document.getElementById('revealDemo'));
+    } else {
+      play();
+    }
+
+    document.getElementById('replayBtn').addEventListener('click', play);
+  })();
+</script>

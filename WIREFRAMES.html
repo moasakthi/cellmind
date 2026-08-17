@@ -1,0 +1,533 @@
+<title>CellMind Wireframes</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --paper:#F3F5F6; --paper-raised:#FFFFFF;
+    --ink:#0A0E13; --ink-soft:#3C4650; --ink-mute:#6B7680;
+    --line:#D6DCE1; --line-soft:#E6EAED;
+    --accent:#0E8F85; --accent-soft:#DEF4F1; --accent-ink:#07443F;
+    --furnace:#B75E17; --furnace-soft:#FBE7D3; --furnace-ink:#5C2E0B;
+    --danger:#B23327; --danger-soft:#FBE1DD; --danger-ink:#5C1B14;
+    --good:#2A7A50; --good-soft:#E1F1E7; --good-ink:#153F29;
+    --radius-sm:3px; --radius-md:6px;
+    --shadow-2:0 8px 28px rgba(10,14,19,.16);
+    --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0A0E13; --paper-raised:#121920;
+      --ink:#EDF1F3; --ink-soft:#B7C0C7; --ink-mute:#7C8790;
+      --line:#232B33; --line-soft:#1B222A;
+      --accent:#49D9CB; --accent-soft:#102E2B; --accent-ink:#9CEEE4;
+      --furnace:#EE9C4C; --furnace-soft:#2E2011; --furnace-ink:#F7C58C;
+      --danger:#EC6B5C; --danger-soft:#301715; --danger-ink:#F5A99C;
+      --good:#57C182; --good-soft:#12291B; --good-ink:#9CE0B7;
+      --shadow-2:0 8px 28px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0A0E13; --paper-raised:#121920;
+    --ink:#EDF1F3; --ink-soft:#B7C0C7; --ink-mute:#7C8790;
+    --line:#232B33; --line-soft:#1B222A;
+    --accent:#49D9CB; --accent-soft:#102E2B; --accent-ink:#9CEEE4;
+    --furnace:#EE9C4C; --furnace-soft:#2E2011; --furnace-ink:#F7C58C;
+    --danger:#EC6B5C; --danger-soft:#301715; --danger-ink:#F5A99C;
+    --good:#57C182; --good-soft:#12291B; --good-ink:#9CE0B7;
+    --shadow-2:0 8px 28px rgba(0,0,0,.55);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{background:var(--paper); color:var(--ink); font-family:var(--font-ui); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;}
+  .mono{font-family:var(--font-mono);}
+  .tabular{font-variant-numeric:tabular-nums;}
+  button{font-family:inherit;}
+
+  .app{display:grid; grid-template-columns:200px 1fr; min-height:100vh;}
+  @media (max-width:760px){ .app{grid-template-columns:1fr;} .sidebar{display:none;} }
+
+  .sidebar{border-right:1px solid var(--line); padding:16px 10px; display:flex; flex-direction:column; gap:16px;}
+  .sidebar .brand{padding:2px 8px 10px; display:flex; align-items:baseline; gap:6px;}
+  .sidebar .brand b{font-size:14.5px;}
+  .sidebar .brand span{font:10.5px var(--font-mono); color:var(--ink-mute);}
+  .sidebar .item{display:flex; align-items:center; gap:8px; padding:8px 9px; border-radius:var(--radius-sm); color:var(--ink-soft); font-size:13px; cursor:pointer; border:none; background:none; width:100%; text-align:left;}
+  .sidebar .item:hover{background:var(--line-soft);}
+  .sidebar .item.active{background:var(--accent-soft); color:var(--accent-ink); font-weight:600;}
+  .sidebar .dot{width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55; flex:none;}
+  .sidebar .foot{margin-top:auto; padding:8px; font-size:11.5px; color:var(--ink-mute);}
+
+  .topbar{grid-column:2; display:flex; align-items:center; justify-content:space-between; padding:10px 22px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--paper); z-index:5;}
+  .topbar .crumb{font-size:13px; color:var(--ink-mute);}
+  .topbar .crumb b{color:var(--ink);}
+  .topbar .who{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-soft);}
+  .theme-toggle{border:1px solid var(--line); background:var(--paper-raised); color:var(--ink); border-radius:var(--radius-md); padding:6px 10px; font:11.5px var(--font-mono); cursor:pointer;}
+
+  main{grid-column:2; padding:22px 26px 80px;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  .screen h1{font-size:19px; margin:0 0 3px;}
+  .screen .sub{color:var(--ink-mute); font-size:13px; margin:0 0 20px;}
+
+  .grid{display:grid; gap:14px;}
+  .cols-4{grid-template-columns:repeat(4,1fr);}
+  .cols-3{grid-template-columns:repeat(3,1fr);}
+  .cols-2{grid-template-columns:1fr 1fr;}
+  .split{grid-template-columns:1.1fr 1fr;}
+  @media (max-width:900px){ .cols-4,.cols-3,.cols-2,.split{grid-template-columns:1fr;} }
+
+  .card{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-md); padding:14px;}
+  .card h3{font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-mute); margin:0 0 10px;}
+
+  .kpi .label{font:10.5px var(--font-mono); text-transform:uppercase; letter-spacing:.05em; color:var(--ink-mute);}
+  .kpi .value{font-size:23px; font-weight:700; font-family:var(--font-mono); margin:4px 0 2px;}
+  .kpi .delta{font-size:11.5px;}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-md);}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; min-width:520px;}
+  th{text-align:left; font:10.5px var(--font-mono); text-transform:uppercase; letter-spacing:.03em; color:var(--ink-mute); padding:9px 12px; border-bottom:1px solid var(--line); background:var(--line-soft); white-space:nowrap;}
+  td{padding:9px 12px; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  tr.hi td{background:var(--furnace-soft);}
+
+  .chip{display:inline-flex; align-items:center; gap:5px; font:10.5px var(--font-mono); font-weight:600; padding:3px 8px; border-radius:100px; white-space:nowrap;}
+  .chip.dot::before{content:""; width:5px; height:5px; border-radius:50%; background:currentColor;}
+  .chip-good{background:var(--good-soft); color:var(--good-ink);}
+  .chip-warn{background:var(--furnace-soft); color:var(--furnace-ink);}
+  .chip-bad{background:var(--danger-soft); color:var(--danger-ink);}
+  .chip-info{background:var(--accent-soft); color:var(--accent-ink);}
+  .chip-neutral{background:var(--line-soft); color:var(--ink-soft);}
+
+  .btn{font-size:12.5px; font-weight:600; border-radius:var(--radius-sm); padding:7px 12px; border:1px solid transparent; cursor:pointer;}
+  .btn-primary{background:var(--accent); color:var(--paper);}
+  .btn-secondary{background:transparent; border-color:var(--line); color:var(--ink);}
+  .btn-ghost{background:transparent; color:var(--ink-soft);}
+  .btn-danger{background:var(--danger); color:#fff;}
+  .btn[disabled]{opacity:.4; cursor:not-allowed;}
+  .row-actions{display:flex; gap:8px; flex-wrap:wrap;}
+
+  .ph{
+    background:repeating-linear-gradient(135deg, var(--line-soft) 0 8px, transparent 8px 16px);
+    border:1px dashed var(--line); border-radius:var(--radius-md);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--ink-mute); font-size:11.5px; padding:10px;
+  }
+
+  .stepper{display:flex; overflow-x:auto; margin:6px 0 4px;}
+  .step{flex:1; min-width:96px; text-align:center; position:relative; padding-top:22px;}
+  .step .node{position:absolute; top:0; left:50%; transform:translateX(-50%); width:14px; height:14px; border-radius:50%; border:2px solid var(--line); background:var(--paper-raised); z-index:1;}
+  .step .line{position:absolute; top:6px; left:0; right:0; height:2px; background:var(--line); z-index:0;}
+  .step:first-child .line{left:50%;} .step:last-child .line{right:50%;}
+  .step.done .node{background:var(--good); border-color:var(--good);}
+  .step.done .line{background:var(--good);}
+  .step.active .node{background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+  .step .name{font-size:10.5px; margin-top:6px; color:var(--ink-soft);}
+  .step.active .name{color:var(--ink); font-weight:600;}
+
+  .meter{max-width:260px;}
+  .meter .track{height:7px; border-radius:100px; background:var(--line-soft); overflow:hidden;}
+  .meter .fill{height:100%; border-radius:100px; background:var(--good);}
+  .meter .label{display:flex; justify-content:space-between; font:11px var(--font-mono); color:var(--ink-mute); margin-bottom:4px;}
+
+  .alert{border-radius:var(--radius-md); padding:10px 12px; font-size:12px; border:1px solid; display:flex; gap:8px; align-items:flex-start;}
+  .alert-warn{background:var(--furnace-soft); border-color:var(--furnace); color:var(--furnace-ink);}
+  .alert-bad{background:var(--danger-soft); border-color:var(--danger); color:var(--danger-ink);}
+  .alert-info{background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink);}
+
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:11px; color:var(--ink-soft); font-weight:600;}
+  .field input, .field select{font-size:12.5px; padding:7px 9px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--paper-raised); color:var(--ink); font-family:inherit;}
+
+  .action-card{border:1px solid var(--line); border-radius:var(--radius-md); padding:12px; background:var(--paper-raised);}
+  .action-card.selected{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent);}
+  .action-card .rank{font:10.5px var(--font-mono); color:var(--ink-mute);}
+  .action-card h4{font-size:13.5px; margin:2px 0 8px;}
+  .action-card .metrics{display:flex; gap:14px; font-size:11.5px; color:var(--ink-soft);}
+  .action-card .metrics b{display:block; font-family:var(--font-mono); color:var(--ink); font-size:13px;}
+
+  .annot{font-size:11px; color:var(--ink-mute); border-top:1px dashed var(--line); margin-top:16px; padding-top:8px;}
+  .screen-tag{font:10.5px var(--font-mono); color:var(--ink-mute); text-transform:uppercase; letter-spacing:.04em;}
+</style>
+
+<div class="app">
+  <nav class="sidebar">
+    <div class="brand"><b>CellMind</b><span>WIREFRAMES</span></div>
+    <div id="navlist"></div>
+    <div class="foot">Low-fidelity — structure &amp; state only.<br>Visual system: STYLE_GUIDE.html</div>
+  </nav>
+
+  <div class="topbar">
+    <div class="crumb">Tenant: <b>Meridian Solar — Plant 2</b> · Signed in as <b id="crumbUser">Q. Nair</b></div>
+    <div class="who">
+      <button class="theme-toggle" id="themeToggle" type="button">◐ Theme</button>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- 1. DASHBOARD -->
+    <section class="screen active" data-screen="dashboard">
+      <span class="screen-tag">Screen 1 · FR-01</span>
+      <h1>Dashboard — Batch List</h1>
+      <p class="sub">Production overview across Plant 2, Line 2. Entry point into every investigation.</p>
+
+      <div class="grid cols-4" style="margin-bottom:16px;">
+        <div class="card kpi"><div class="label">Plant Yield (7d)</div><div class="value tabular">94.1%</div><div class="delta" style="color:var(--danger-ink)">▼ 1.4 pts</div></div>
+        <div class="card kpi"><div class="label">Defect Rate (7d)</div><div class="value tabular">5.9%</div><div class="delta" style="color:var(--furnace-ink)">▲ driven by F07</div></div>
+        <div class="card kpi"><div class="label">Active Alerts</div><div class="value tabular">3</div><div class="delta" style="color:var(--ink-mute)">1 high severity</div></div>
+        <div class="card kpi"><div class="label">Cameras Online</div><div class="value tabular">11 / 12</div><div class="delta" style="color:var(--furnace-ink)">CAM-EL-07 degraded</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Recent Batches</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Batch</th><th>Line</th><th>Date</th><th>Cells</th><th>Yield</th><th>Defect Rate</th><th>Risk</th><th></th></tr></thead>
+            <tbody>
+              <tr class="hi">
+                <td class="mono">B1847</td><td>L2</td><td class="mono">2026-08-12</td><td class="mono tabular">10,000</td>
+                <td class="mono tabular">91.6%</td><td class="mono tabular">8.4%</td><td><span class="chip chip-bad">HIGH</span></td>
+                <td><button class="btn btn-primary">Investigate</button></td>
+              </tr>
+              <tr>
+                <td class="mono">B1846</td><td>L2</td><td class="mono">2026-08-12</td><td class="mono tabular">9,800</td>
+                <td class="mono tabular">97.2%</td><td class="mono tabular">2.8%</td><td><span class="chip chip-neutral">LOW</span></td>
+                <td><button class="btn btn-ghost">View</button></td>
+              </tr>
+              <tr>
+                <td class="mono">B1845</td><td>L1</td><td class="mono">2026-08-11</td><td class="mono tabular">9,950</td>
+                <td class="mono tabular">95.0%</td><td class="mono tabular">5.0%</td><td><span class="chip chip-warn">MEDIUM</span></td>
+                <td><button class="btn btn-ghost">View</button></td>
+              </tr>
+              <tr>
+                <td class="mono">B1844</td><td>L2</td><td class="mono">2026-08-11</td><td class="mono tabular">9,900</td>
+                <td class="mono tabular">96.4%</td><td class="mono tabular">3.6%</td><td><span class="chip chip-neutral">LOW</span></td>
+                <td><button class="btn btn-ghost">View</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="annot">Annotation — row highlight (furnace-soft) marks batches above the plant's risk threshold; clicking "Investigate" opens Screen 2 for that batch (FR-01).</p>
+    </section>
+
+    <!-- 2. INVESTIGATION -->
+    <section class="screen" data-screen="investigation">
+      <span class="screen-tag">Screen 2 · FR-02–08, FR-14–17</span>
+      <h1>Investigation — Batch B1847</h1>
+      <p class="sub">Agent Hub pipeline result: Inspection → Process → Context → Root Cause.</p>
+
+      <div class="stepper" style="margin-bottom:18px;">
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Inspection</span></div>
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Process</span></div>
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Context</span></div>
+        <div class="step active"><span class="line"></span><span class="node"></span><span class="name">Root Cause</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Optimization</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Simulation</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Validation</span></div>
+      </div>
+
+      <div class="grid split">
+        <div class="card">
+          <h3>Cell C392 — Source: CAM-EL-07 (RTSP)</h3>
+          <div class="ph" style="height:180px; margin-bottom:10px;">[ EL image placeholder — Cell C392 ]</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="chip chip-bad">DEFECT PROB. 87%</span>
+            <span class="chip chip-warn">SEVERITY: HIGH</span>
+            <span class="chip dot chip-good">CONFIDENCE 91%</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Evidence</h3>
+          <div class="table-wrap" style="margin-bottom:10px;">
+            <table>
+              <thead><tr><th>Equipment</th><th>Units</th><th>Defect Rate</th><th>Share</th></tr></thead>
+              <tbody>
+                <tr class="hi"><td class="mono">F07</td><td class="mono tabular">2,400</td><td class="mono tabular">25.6%</td><td class="mono tabular">73.2%</td></tr>
+                <tr><td class="mono">F03</td><td class="mono tabular">3,100</td><td class="mono tabular">2.9%</td><td class="mono tabular">10.8%</td></tr>
+                <tr><td class="mono">F05</td><td class="mono tabular">2,900</td><td class="mono tabular">2.6%</td><td class="mono tabular">8.8%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="alert alert-info">💬 Historical match: Batch B1632 — recorded action was Furnace F07 calibration.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3>Probable Contributing Factor</h3>
+        <p style="margin:0 0 10px; font-size:14px;"><b>F07 firing-process variation</b> — presented as a probable factor, not a proven cause (BR-04).</p>
+        <div class="meter"><div class="label"><span>Confidence</span><span class="tabular">91%</span></div><div class="track"><div class="fill" style="width:91%"></div></div></div>
+      </div>
+      <p class="annot">Annotation — evidence table shows rate + share side-by-side per FR-05's normalization fix; a conflicting-evidence or missing-data state (FR-16/17) would replace this card with the matching alert from the design system.</p>
+    </section>
+
+    <!-- 3. RECOMMENDATION -->
+    <section class="screen" data-screen="recommendation">
+      <span class="screen-tag">Screen 3 · FR-09–12, FR-20</span>
+      <h1>Recommendation &amp; Approval — Batch B1847</h1>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <span class="chip chip-info">AUTONOMY: LEVEL B — AUTO-SUGGEST</span>
+        <span class="screen-tag">Top action pre-selected · approval required</span>
+      </div>
+
+      <div class="grid cols-3" style="margin-bottom:16px;">
+        <div class="action-card selected">
+          <div class="rank">RANK 1 · PRE-SELECTED</div>
+          <h4>Adjust F07 firing profile</h4>
+          <div class="metrics">
+            <div>Cost<br><b>Low</b></div><div>Impact<br><b>+2.4%</b></div><div>Downtime<br><b>None</b></div>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="rank">RANK 2</div>
+          <h4>Perform F07 maintenance</h4>
+          <div class="metrics"><div>Cost<br><b>Medium</b></div><div>Impact<br><b>+4.1%</b></div><div>Downtime<br><b>2 hrs</b></div></div>
+        </div>
+        <div class="action-card">
+          <div class="rank">RANK 3</div>
+          <h4>Replace component</h4>
+          <div class="metrics"><div>Cost<br><b>High</b></div><div>Impact<br><b>+4.8%</b></div><div>Downtime<br><b>8 hrs</b></div></div>
+        </div>
+      </div>
+
+      <div class="grid cols-2" style="margin-bottom:16px;">
+        <div class="card">
+          <h3>What-If Simulation</h3>
+          <div class="field" style="margin-bottom:10px; max-width:220px;"><label>Firing temperature variance</label><input type="range" /></div>
+          <div style="display:flex; gap:20px;">
+            <div><div class="screen-tag">Current</div><div class="mono tabular" style="font-size:20px;">8.4%</div></div>
+            <div><div class="screen-tag">Predicted</div><div class="mono tabular" style="font-size:20px; color:var(--good-ink);">5.6%</div></div>
+          </div>
+          <p class="annot" style="margin-top:8px;">Always labeled "Predicted" — never presented as a guaranteed outcome (FR-10).</p>
+        </div>
+        <div class="card">
+          <h3>Approval</h3>
+          <p style="font-size:12.5px; margin:0 0 10px;">Authored by <span class="mono">Root Cause Agent (system)</span>. Approval required from: <b>Process Engineer</b>.</p>
+          <div class="alert alert-info" style="margin-bottom:10px;">💬 Signed in as <b class="mono">J. Alvarez</b> (Process Engineer) — eligible to approve.</div>
+          <div class="row-actions"><button class="btn btn-secondary">Modify</button><button class="btn btn-danger">Reject</button><button class="btn btn-primary">Approve action</button></div>
+        </div>
+      </div>
+      <p class="annot">Annotation — Level A would show this same ranked list with no card pre-selected and no default approver framing; Level C is not offered as an option anywhere in this UI (FR-20 gating).</p>
+    </section>
+
+    <!-- 4. CAMERAS -->
+    <section class="screen" data-screen="cameras">
+      <span class="screen-tag">Screen 4 · FR-18</span>
+      <h1>Camera Administration</h1>
+      <p class="sub">Register and monitor EL/visual capture sources. Role: Platform Administrator.</p>
+
+      <div class="grid split">
+        <div class="card">
+          <h3>Registered Cameras</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Camera</th><th>Type</th><th>EL-Capable</th><th>Station</th><th>Health</th><th>Last Frame</th></tr></thead>
+              <tbody>
+                <tr class="hi"><td class="mono">CAM-EL-07</td><td>EL</td><td>✓</td><td>L2 / S3</td><td><span class="chip dot chip-warn">DEGRADED</span></td><td class="mono">10:42:03</td></tr>
+                <tr><td class="mono">CAM-EL-02</td><td>EL</td><td>✓</td><td>L1 / S1</td><td><span class="chip dot chip-good">ONLINE</span></td><td class="mono">10:44:51</td></tr>
+                <tr><td class="mono">CAM-VIS-11</td><td>Visual</td><td>—</td><td>L2 / S3</td><td><span class="chip dot chip-good">ONLINE</span></td><td class="mono">10:44:55</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Register Camera</h3>
+          <div class="grid" style="gap:10px;">
+            <div class="field"><label>Stream URL</label><input class="mono" value="rtsps://plant2-l2s3.local/el07" /></div>
+            <div class="field"><label>Camera type</label><select><option>EL</option><option>Visual</option></select></div>
+            <div class="field"><label>EL-capable (bias + dark-chamber confirmed)</label><select><option>Yes</option><option>No</option></select></div>
+          </div>
+          <div class="row-actions" style="margin-top:12px;"><button class="btn btn-primary">Register</button></div>
+          <div class="alert alert-warn" style="margin-top:12px;">💬 A camera not marked EL-capable cannot be bound to an EL inspection station (FR-18).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. RETRAINING -->
+    <section class="screen" data-screen="retraining">
+      <span class="screen-tag">Screen 5 · FR-19</span>
+      <h1>Retraining Console</h1>
+      <p class="sub">Role: ML Operations Lead.</p>
+
+      <div class="alert alert-warn" style="margin-bottom:14px;">💬 Drift alert: Inspection model accuracy dropped 4.2 points over 3 days.</div>
+
+      <div class="stepper" style="margin-bottom:16px;">
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Data Validation</span></div>
+        <div class="step done"><span class="line"></span><span class="node"></span><span class="name">Training</span></div>
+        <div class="step active"><span class="line"></span><span class="node"></span><span class="name">Holdout Eval</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Staged Rollout</span></div>
+        <div class="step"><span class="line"></span><span class="node"></span><span class="name">Approval</span></div>
+      </div>
+
+      <div class="grid split">
+        <div class="card">
+          <h3>Retraining Runs</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Run</th><th>Model</th><th>Trigger</th><th>Holdout</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr class="hi"><td class="mono">RUN-2210</td><td class="mono">v2.4→v2.5</td><td>Drift alert</td><td class="mono tabular">F1 0.93</td><td><span class="chip chip-warn">PENDING APPROVAL</span></td></tr>
+                <tr><td class="mono">RUN-2198</td><td class="mono">v2.3→v2.4</td><td>Scheduled</td><td class="mono tabular">F1 0.91</td><td><span class="chip chip-good">PROMOTED</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Approve RUN-2210</h3>
+          <p style="font-size:12.5px; margin:0 0 8px;">Requested by <b class="mono">Q. Nair</b> (Quality Engineer).</p>
+          <div class="alert alert-info" style="margin-bottom:10px;">💬 Signed in as <b class="mono">J. Alvarez</b> (ML Operations Lead) — distinct from requester, satisfies BR-10.</div>
+          <div class="row-actions"><button class="btn btn-secondary">Reject</button><button class="btn btn-primary">Approve promotion</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. TAXONOMY -->
+    <section class="screen" data-screen="taxonomy">
+      <span class="screen-tag">Screen 6 · FR-21</span>
+      <h1>Defect Taxonomy</h1>
+      <p class="sub">Version <span class="mono">v1.3</span> · Role: Platform Administrator.</p>
+
+      <div class="grid split">
+        <div class="card">
+          <h3>Categories</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Category</th><th>Subtype</th><th>Severity</th><th>Root-Cause Family</th></tr></thead>
+              <tbody>
+                <tr class="hi"><td>Micro-crack</td><td>Edge-induced</td><td><span class="chip chip-warn">MEDIUM</span></td><td>Firing thermal shock</td></tr>
+                <tr><td>Micro-crack</td><td>Handling</td><td><span class="chip chip-neutral">LOW</span></td><td>Handling stress</td></tr>
+                <tr><td>Finger interruption</td><td>Print defect</td><td><span class="chip chip-bad">HIGH</span></td><td>Metallization process</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Publish New Version</h3>
+          <p style="font-size:12.5px; margin:0 0 10px;">Changelog: split "Finger interruption" into two subtypes.</p>
+          <div class="row-actions" style="margin-bottom:12px;"><button class="btn btn-primary">Publish v1.4</button></div>
+          <div class="alert alert-bad">💬 Compatibility check: CV model class <span class="mono">finger_break</span> has no match in v1.4. Retraining review queued (FR-21 → FR-19).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. RBAC -->
+    <section class="screen" data-screen="rbac">
+      <span class="screen-tag">Screen 7 · FR-22, NFR-05</span>
+      <h1>RBAC &amp; Audit</h1>
+      <p class="sub">Role: Platform Administrator.</p>
+
+      <div class="grid split" style="margin-bottom:14px;">
+        <div class="card">
+          <h3>Users</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>User</th><th>Role</th><th>Tenant</th><th>Last Login</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">Q. Nair</td><td>Quality Engineer</td><td>Meridian Solar</td><td class="mono">08-13 09:02</td></tr>
+                <tr><td class="mono">J. Alvarez</td><td>Process Engineer / ML Ops Lead</td><td>Meridian Solar</td><td class="mono">08-13 10:15</td></tr>
+                <tr><td class="mono">R. Chen</td><td>Platform Administrator</td><td>Meridian Solar</td><td class="mono">08-12 17:40</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Role → Permission (excerpt)</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Role</th><th>Approve Retrain</th><th>Manage RBAC</th></tr></thead>
+              <tbody>
+                <tr><td>ML Operations Lead</td><td><span class="chip chip-good">✓</span></td><td><span class="chip chip-neutral">—</span></td></tr>
+                <tr><td>Platform Administrator</td><td><span class="chip chip-neutral">—</span></td><td><span class="chip chip-good">✓</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Audit Log (tail)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">10:41</td><td class="mono">J. Alvarez</td><td>approve_recommendation</td><td class="mono">B1847 / rec-3391</td></tr>
+              <tr><td class="mono">09:58</td><td class="mono">R. Chen</td><td>register_camera</td><td class="mono">CAM-EL-07</td></tr>
+              <tr><td class="mono">09:02</td><td class="mono">Q. Nair</td><td>request_retrain</td><td class="mono">RUN-2210</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="annot">Annotation — every row here corresponds one-to-one to a DDD §11.2 <span class="mono">AuditLog</span> record; nothing is summarized or aggregated before display (NFR-05).</p>
+    </section>
+
+    <!-- 8. LANDING PAGE -->
+    <section class="screen" data-screen="landing">
+      <span class="screen-tag">Screen 8 · Public surface, not part of the authenticated app · DDD §16.1.3</span>
+      <h1>Landing Page — Structure Only</h1>
+      <p class="sub">Low-fidelity pass on the public pitch page. The rich, animated, on-brand version lives in LANDING_PAGE.html — kept separate because a wireframe should show structure, not final visual/motion design.</p>
+
+      <div class="card" style="margin-bottom:12px;">
+        <h3>Nav + Hero</h3>
+        <div class="ph" style="height:26px; margin-bottom:8px;">[ nav: brand · anchor links · theme toggle · primary CTA ]</div>
+        <div class="ph" style="height:110px;">[ hero: eyebrow tag · headline (2 lines) · sub-copy · 2 CTAs · live readout panel ]</div>
+      </div>
+
+      <div class="grid cols-2" style="margin-bottom:12px;">
+        <div class="card"><h3>Problem</h3><div class="ph" style="height:70px;">[ 6-step manual-investigation chain, left→right ]</div></div>
+        <div class="card"><h3>Solution</h3><div class="ph" style="height:70px;">[ Detect→Trace→Explain→Optimize→Prevent→Learn stepper ]</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;">
+        <h3>How It Works — 7 Agent Cards</h3>
+        <div class="grid cols-4"><div class="ph" style="height:60px;">[Inspection]</div><div class="ph" style="height:60px;">[Process]</div><div class="ph" style="height:60px;">[Context]</div><div class="ph" style="height:60px;">[Root Cause]</div></div>
+      </div>
+
+      <div class="grid cols-2" style="margin-bottom:12px;">
+        <div class="card"><h3>Proof — B1847 Stats</h3><div class="ph" style="height:70px;">[ 4 animated-counter stat cards ]</div></div>
+        <div class="card"><h3>Capabilities</h3><div class="ph" style="height:70px;">[ 5 cards: FR-18…FR-22 ]</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Final CTA + Footer</h3>
+        <div class="ph" style="height:50px;">[ tagline quote · CTA · IP/footer line ]</div>
+      </div>
+      <p class="annot">Annotation — this screen has no tenant/auth dependency (DDD §16.1.3); nothing here reads from the product's API. Motion is out of scope for a wireframe by definition — see STYLE_GUIDE.html §Motion for the token spec, and LANDING_PAGE.html for the built result.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var screens = [
+    {id:'dashboard', label:'Dashboard'},
+    {id:'investigation', label:'Investigation'},
+    {id:'recommendation', label:'Recommendations'},
+    {id:'cameras', label:'Cameras'},
+    {id:'retraining', label:'Retraining'},
+    {id:'taxonomy', label:'Taxonomy'},
+    {id:'rbac', label:'RBAC & Audit'},
+    {id:'landing', label:'Landing Page'}
+  ];
+  var navlist = document.getElementById('navlist');
+  screens.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.className = 'item' + (i===0 ? ' active' : '');
+    b.innerHTML = '<span class="dot"></span>' + s.label;
+    b.addEventListener('click', function(){ showScreen(s.id); });
+    b.dataset.screen = s.id;
+    navlist.appendChild(b);
+  });
+
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(function(el){ el.classList.toggle('active', el.dataset.screen === id); });
+    document.querySelectorAll('.sidebar .item').forEach(function(el){ el.classList.toggle('active', el.dataset.screen === id); });
+  }
+
+  document.getElementById('themeToggle').addEventListener('click', function(){
+    var root = document.documentElement;
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var cur = root.getAttribute('data-theme');
+    var effectiveIsDark = cur ? cur === 'dark' : prefersDark;
+    root.setAttribute('data-theme', effectiveIsDark ? 'light' : 'dark');
+  });
+</script>

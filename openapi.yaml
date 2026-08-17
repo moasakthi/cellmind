@@ -1,0 +1,1058 @@
+openapi: 3.0.3
+info:
+  title: CellMind API
+  version: "1.0.0"
+  description: >
+    End-to-end REST API for CellMind — AI-powered solar-cell manufacturing intelligence.
+    Implements BRD.MD v1.2 / DDD.MD v1.0. Every write on Process/Equipment data is
+    intentionally absent from this contract (BR-07, REQ-12.1): CellMind never actuates
+    production parameters. All endpoints except /auth/* require a bearer JWT and are
+    scoped to the caller's tenant and role (FR-22).
+  contact:
+    name: CellMind Platform Team
+servers:
+  - url: https://api.cellmind.example/v1
+    description: Production/Pilot
+  - url: https://demo.cellmind.example/v1
+    description: Hackathon Demo
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+  - name: Batches
+  - name: Cells
+  - name: Process & Equipment
+  - name: Cameras
+  - name: Investigations
+  - name: Recommendations
+  - name: Simulations
+  - name: Retraining
+  - name: Taxonomy
+  - name: RBAC
+  - name: Autonomy & Safety
+  - name: Audit
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Local credential login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/sso/callback:
+    get:
+      tags: [Auth]
+      summary: SSO/LDAP/SAML federation callback (Pilot tier and above)
+      security: []
+      parameters:
+        - { name: code, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Authenticated via identity provider
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /users/me:
+    get:
+      tags: [Auth]
+      summary: Current user, role and tenant
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /batches:
+    get:
+      tags: [Batches]
+      summary: List batches (tenant-scoped)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - { name: lineId, in: query, schema: { type: string } }
+        - { name: riskLevel, in: query, schema: { $ref: '#/components/schemas/RiskLevel' } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Batch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /batches/{batchId}:
+    get:
+      tags: [Batches]
+      summary: Batch detail with quality metrics
+      parameters:
+        - $ref: '#/components/parameters/BatchIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Batch' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /batches/{batchId}/cells:
+    get:
+      tags: [Cells]
+      summary: List cells in a batch
+      parameters:
+        - $ref: '#/components/parameters/BatchIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Cell' }
+
+  /batches/{batchId}/process:
+    get:
+      tags: [Process & Equipment]
+      summary: Process parameters recorded for a batch
+      parameters:
+        - $ref: '#/components/parameters/BatchIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProcessRecord' }
+
+  /cells/{cellId}:
+    get:
+      tags: [Cells]
+      summary: Cell detail (inspection result, electrical characteristics)
+      parameters:
+        - $ref: '#/components/parameters/CellIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cell' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /cells/{cellId}/inspect:
+    post:
+      tags: [Cells]
+      summary: Run/re-run inspection on a cell's EL image (FR-02, FR-03)
+      parameters:
+        - $ref: '#/components/parameters/CellIdParam'
+      responses:
+        '200':
+          description: Inspection result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentResult' }
+        '422':
+          description: Image quality insufficient (FR-03) — no classification returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /equipment:
+    get:
+      tags: [Process & Equipment]
+      summary: List equipment
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Equipment' }
+
+  /equipment/{equipmentId}:
+    get:
+      tags: [Process & Equipment]
+      summary: Equipment detail
+      parameters:
+        - { name: equipmentId, in: path, required: true, schema: { type: string }, example: F07 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Equipment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /cameras:
+    get:
+      tags: [Cameras]
+      summary: List registered cameras (FR-18)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Camera' }
+    post:
+      tags: [Cameras]
+      summary: Register a camera — requires manage_cameras permission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CameraCreateRequest' }
+      responses:
+        '201':
+          description: Camera registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Camera' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422':
+          description: EL-capability metadata missing/invalid for an EL registration (REQ-18.1)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /cameras/{cameraId}:
+    get:
+      tags: [Cameras]
+      summary: Camera detail
+      parameters:
+        - $ref: '#/components/parameters/CameraIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Camera' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /cameras/{cameraId}/health:
+    get:
+      tags: [Cameras]
+      summary: Stream health status (Online / Degraded / Offline)
+      parameters:
+        - $ref: '#/components/parameters/CameraIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CameraHealth' }
+
+  /investigations:
+    get:
+      tags: [Investigations]
+      summary: List investigations
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Investigation' }
+    post:
+      tags: [Investigations]
+      summary: Trigger the Agent Hub pipeline for a batch/cell (FR-06)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvestigationCreateRequest' }
+      responses:
+        '202':
+          description: Investigation started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Investigation' }
+        '503':
+          description: Agent Hub unavailable — production is not blocked by this response (BR-11, REQ-20.4)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /investigations/{investigationId}:
+    get:
+      tags: [Investigations]
+      summary: Investigation status, agent results and evidence
+      parameters:
+        - $ref: '#/components/parameters/InvestigationIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Investigation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /recommendations/{investigationId}:
+    get:
+      tags: [Recommendations]
+      summary: Ranked corrective actions for an investigation (FR-09, FR-11, FR-20)
+      parameters:
+        - $ref: '#/components/parameters/InvestigationIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Recommendation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /recommendations/{recommendationId}/approve:
+    post:
+      tags: [Recommendations]
+      summary: Approve, reject or modify a recommendation (FR-12, BR-10)
+      parameters:
+        - { name: recommendationId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalDecisionRequest' }
+      responses:
+        '200':
+          description: Decision recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Approval' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Requester and approver must be distinct users (BR-10)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /simulations:
+    post:
+      tags: [Simulations]
+      summary: Run a what-if simulation against a batch's process data (FR-10)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SimulationRequest' }
+      responses:
+        '200':
+          description: Predicted outcome (never presented as guaranteed — FR-10)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SimulationResult' }
+
+  /retraining/runs:
+    get:
+      tags: [Retraining]
+      summary: List retraining runs (FR-19)
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/RetrainingStatus' } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RetrainingRun' }
+    post:
+      tags: [Retraining]
+      summary: Request a retraining run — requires request_retrain permission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetrainingRunCreateRequest' }
+      responses:
+        '201':
+          description: Run queued at the data-validation stage (DDD §7.1)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetrainingRun' }
+        '422':
+          description: Below minimum labeled-data volume (REQ-19.2)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /retraining/runs/{runId}:
+    get:
+      tags: [Retraining]
+      summary: Retraining run detail (pipeline stage, holdout/canary results)
+      parameters:
+        - $ref: '#/components/parameters/RunIdParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetrainingRun' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /retraining/runs/{runId}/approve:
+    post:
+      tags: [Retraining]
+      summary: Approve or reject promotion to production — ML Operations Lead only (BR-10)
+      parameters:
+        - $ref: '#/components/parameters/RunIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalDecisionRequest' }
+      responses:
+        '200':
+          description: Decision recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Approval' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Approver is the same user who requested the run (BR-10, REQ-19.5)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /retraining/runs/{runId}/rollback:
+    post:
+      tags: [Retraining]
+      summary: Manually roll back to the prior production model version
+      parameters:
+        - $ref: '#/components/parameters/RunIdParam'
+      responses:
+        '200':
+          description: Rolled back
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelVersion' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /taxonomy:
+    get:
+      tags: [Taxonomy]
+      summary: List defect taxonomy entries (FR-21)
+      parameters:
+        - { name: version, in: query, schema: { type: string }, example: v1.3 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DefectTaxonomyEntry' }
+
+  /taxonomy/{taxonomyId}:
+    get:
+      tags: [Taxonomy]
+      summary: Taxonomy entry detail
+      parameters:
+        - { name: taxonomyId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefectTaxonomyEntry' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /taxonomy/versions:
+    get:
+      tags: [Taxonomy]
+      summary: List taxonomy versions and changelogs
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TaxonomyVersion' }
+    post:
+      tags: [Taxonomy]
+      summary: Publish a new taxonomy version — requires configure_taxonomy permission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaxonomyVersionCreateRequest' }
+      responses:
+        '201':
+          description: Version published; model-compatibility check result included (FR-21 → FR-19 dependency)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxonomyVersion' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /rbac/roles:
+    get:
+      tags: [RBAC]
+      summary: List roles and their permissions
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Role' }
+
+  /rbac/users:
+    get:
+      tags: [RBAC]
+      summary: List users in the caller's tenant — requires manage_rbac permission
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+
+  /rbac/users/{userId}/role:
+    post:
+      tags: [RBAC]
+      summary: Assign a role to a user — requires manage_rbac permission
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleId]
+              properties:
+                roleId: { type: string, example: role_ml_ops_lead }
+      responses:
+        '200':
+          description: Role assigned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /autonomy-config/{lineId}:
+    get:
+      tags: [Autonomy & Safety]
+      summary: Autonomy level and fail-closed override for a line (FR-20)
+      parameters:
+        - { name: lineId, in: path, required: true, schema: { type: string }, example: L2 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutonomyConfig' }
+    put:
+      tags: [Autonomy & Safety]
+      summary: Update autonomy level for a line — requires manage_rbac-equivalent Platform Administrator permission
+      parameters:
+        - { name: lineId, in: path, required: true, schema: { type: string }, example: L2 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AutonomyConfig' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutonomyConfig' }
+        '422':
+          description: Attempted to set autonomy_level to C (REQ-20.5) — rejected regardless of caller role
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /safety-constraints:
+    get:
+      tags: [Autonomy & Safety]
+      summary: List safety constraints, optionally filtered by line
+      parameters:
+        - { name: lineId, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SafetyConstraint' }
+    post:
+      tags: [Autonomy & Safety]
+      summary: Add a safety constraint for a line
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SafetyConstraint' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SafetyConstraint' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /audit-log:
+    get:
+      tags: [Audit]
+      summary: Query the append-only audit log — requires manage_rbac permission (NFR-05)
+      parameters:
+        - { name: actorId, in: query, schema: { type: string, format: uuid } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: since, in: query, schema: { type: string, format: date-time } }
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/AuditLogEntry' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    BatchIdParam: { name: batchId, in: path, required: true, schema: { type: string }, example: B1847 }
+    CellIdParam: { name: cellId, in: path, required: true, schema: { type: string }, example: C392 }
+    CameraIdParam: { name: cameraId, in: path, required: true, schema: { type: string }, example: CAM-EL-07 }
+    InvestigationIdParam: { name: investigationId, in: path, required: true, schema: { type: string, format: uuid } }
+    RunIdParam: { name: runId, in: path, required: true, schema: { type: string }, example: RUN-2210 }
+    PageParam: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    PageSizeParam: { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 25 } }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Caller's role lacks the required permission (FR-22) — attempt is audit-logged
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource does not exist or is outside the caller's tenant scope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: FORBIDDEN }
+        message: { type: string, example: "Your role does not permit approving retraining runs." }
+
+    PaginatedResponse:
+      type: object
+      properties:
+        page: { type: integer, example: 1 }
+        pageSize: { type: integer, example: 25 }
+        total: { type: integer, example: 132 }
+
+    RiskLevel: { type: string, enum: [LOW, MEDIUM, HIGH] }
+    Severity: { type: string, enum: [LOW, MEDIUM, HIGH] }
+    ConfidenceBand: { type: string, enum: [HIGH, MEDIUM, LOW, CONFLICTING] }
+    AutonomyLevel: { type: string, enum: [A, B, C], description: "C is represented for schema forward-compatibility only; unreachable at runtime until FR-20 sign-off criteria are met (BR-08)." }
+    CameraType: { type: string, enum: [EL, VISUAL] }
+    CameraStatus: { type: string, enum: [ONLINE, DEGRADED, OFFLINE] }
+    RetrainingStatus: { type: string, enum: [DATA_VALIDATION, TRAINING, HOLDOUT_EVAL, STAGED_ROLLOUT, PENDING_APPROVAL, PROMOTED, REJECTED, ROLLED_BACK] }
+    InvestigationStatus: { type: string, enum: [RUNNING, COMPLETE, PARTIAL, UNAVAILABLE] }
+    ApprovalDecision: { type: string, enum: [approved, rejected, modified] }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+        expiresIn: { type: integer, example: 3600 }
+        user: { $ref: '#/components/schemas/User' }
+
+    Tenant:
+      type: object
+      properties:
+        tenantId: { type: string, format: uuid }
+        name: { type: string, example: "Meridian Solar — Plant 2" }
+        createdAt: { type: string, format: date-time }
+
+    Role:
+      type: object
+      properties:
+        roleId: { type: string, example: role_ml_ops_lead }
+        roleName:
+          type: string
+          enum: [Viewer, Quality Engineer, Process Engineer, Equipment Engineer, Plant/Operations Manager, Platform Administrator, ML Operations Lead]
+        permissions:
+          type: array
+          items: { type: string, example: approve_retrain }
+
+    User:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        name: { type: string, example: "J. Alvarez" }
+        email: { type: string, format: email }
+        roleId: { type: string, example: role_ml_ops_lead }
+        ssoSubject: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Batch:
+      type: object
+      properties:
+        batchId: { type: string, example: B1847 }
+        tenantId: { type: string, format: uuid }
+        productionDate: { type: string, format: date }
+        lineId: { type: string, example: L2 }
+        cellCount: { type: integer, example: 10000 }
+        goodCount: { type: integer, example: 9160 }
+        defectCount: { type: integer, example: 840 }
+        yield: { type: number, format: float, example: 91.6 }
+        defectRate: { type: number, format: float, example: 8.4 }
+        riskLevel: { $ref: '#/components/schemas/RiskLevel' }
+
+    Cell:
+      type: object
+      properties:
+        cellId: { type: string, example: C392 }
+        batchId: { type: string, example: B1847 }
+        imagePath: { type: string }
+        defectProbability: { type: number, format: float, example: 0.87 }
+        severity: { $ref: '#/components/schemas/Severity' }
+        confidence: { type: number, format: float, example: 0.91 }
+        oodFlag: { type: boolean, example: false }
+        taxonomyId: { type: string, nullable: true, example: micro_crack_edge }
+        voc: { type: number, format: float }
+        isc: { type: number, format: float }
+        fillFactor: { type: number, format: float }
+        efficiency: { type: number, format: float }
+        seriesResistance: { type: number, format: float }
+
+    ProcessRecord:
+      type: object
+      properties:
+        processId: { type: string, format: uuid }
+        batchId: { type: string, example: B1847 }
+        stage: { type: string, example: firing }
+        equipmentId: { type: string, example: F07 }
+        temperature: { type: number, format: float }
+        duration: { type: number, format: float }
+        pressure: { type: number, format: float }
+        gasFlow: { type: number, format: float }
+        timestamp: { type: string, format: date-time }
+
+    Equipment:
+      type: object
+      properties:
+        equipmentId: { type: string, example: F07 }
+        equipmentType: { type: string, example: firing_furnace }
+        operatingHours: { type: number, format: float, example: 14320.5 }
+        maintenanceDate: { type: string, format: date }
+        status: { type: string, example: active }
+
+    Camera:
+      type: object
+      properties:
+        cameraId: { type: string, example: CAM-EL-07 }
+        tenantId: { type: string, format: uuid }
+        cameraType: { $ref: '#/components/schemas/CameraType' }
+        elCapable: { type: boolean, example: true }
+        model: { type: string, example: "Synapt EL-Cap 4K" }
+        lineId: { type: string, example: L2 }
+        stationId: { type: string, example: S3 }
+        streamUrl: { type: string, example: "rtsps://plant2-l2s3.local/el07" }
+        status: { $ref: '#/components/schemas/CameraStatus' }
+        lastFrameAt: { type: string, format: date-time }
+        retentionDays: { type: integer, example: 90 }
+
+    CameraCreateRequest:
+      type: object
+      required: [cameraType, streamUrl, lineId, stationId]
+      properties:
+        cameraType: { $ref: '#/components/schemas/CameraType' }
+        elCapable: { type: boolean, default: false, description: "Required true, with capture conditions confirmed, before this camera may be bound to an EL station (REQ-18.1)." }
+        model: { type: string }
+        streamUrl: { type: string, example: "rtsps://plant2-l2s3.local/el07" }
+        lineId: { type: string }
+        stationId: { type: string }
+        retentionDays: { type: integer, default: 90 }
+
+    CameraHealth:
+      type: object
+      properties:
+        cameraId: { type: string, example: CAM-EL-07 }
+        status: { $ref: '#/components/schemas/CameraStatus' }
+        lastFrameAt: { type: string, format: date-time }
+        consecutiveMissedHeartbeats: { type: integer, example: 3 }
+
+    EvidenceItem:
+      type: object
+      properties:
+        sourceType: { type: string, enum: [image, process_param, equipment, historical_incident, sop] }
+        sourceRef: { type: string, example: "Batch B1632" }
+        description: { type: string, example: "Similar incident found in Batch B1632; corrective action was Furnace F07 calibration." }
+
+    AgentResult:
+      type: object
+      description: Common envelope every Agent Hub agent returns (DDD §4.4). Evidence is never empty above the "low" confidence threshold (REQ-07.2).
+      properties:
+        agentName: { type: string, example: RootCauseAgent }
+        result: { type: object }
+        confidence: { type: number, format: float, example: 0.91 }
+        confidenceBand: { $ref: '#/components/schemas/ConfidenceBand' }
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/EvidenceItem' }
+        dataGaps:
+          type: array
+          items: { type: string, example: "firing_temperature missing" }
+        oodFlag: { type: boolean, example: false }
+
+    InvestigationCreateRequest:
+      type: object
+      required: [batchId]
+      properties:
+        batchId: { type: string, example: B1847 }
+        cellId: { type: string, example: C392, nullable: true }
+
+    Investigation:
+      type: object
+      properties:
+        investigationId: { type: string, format: uuid }
+        batchId: { type: string, example: B1847 }
+        cellId: { type: string, example: C392 }
+        status: { $ref: '#/components/schemas/InvestigationStatus' }
+        agents:
+          type: object
+          properties:
+            inspection: { $ref: '#/components/schemas/AgentResult' }
+            process: { $ref: '#/components/schemas/AgentResult' }
+            context: { $ref: '#/components/schemas/AgentResult' }
+            rootCause: { $ref: '#/components/schemas/AgentResult' }
+        createdAt: { type: string, format: date-time }
+
+    ActionCandidate:
+      type: object
+      properties:
+        actionId: { type: string, format: uuid }
+        rank: { type: integer, example: 1 }
+        title: { type: string, example: "Adjust F07 firing profile" }
+        cost: { type: string, enum: [Low, Medium, High] }
+        expectedImprovementPct: { type: number, format: float, example: 2.4 }
+        downtimeHours: { type: number, format: float, example: 0 }
+        riskScore: { type: number, format: float, example: 0.1 }
+        preSelected: { type: boolean, example: true, description: "True only at Autonomy Level B for the top-ranked action (REQ-20.2)." }
+        filtered: { type: boolean, example: false }
+        filterReason: { type: string, nullable: true, example: null }
+
+    Recommendation:
+      type: object
+      properties:
+        recommendationId: { type: string, format: uuid }
+        investigationId: { type: string, format: uuid }
+        authoredBy: { type: string, example: "system:RootCauseAgent" }
+        autonomyLevel: { $ref: '#/components/schemas/AutonomyLevel' }
+        rankedActions:
+          type: array
+          items: { $ref: '#/components/schemas/ActionCandidate' }
+        filteredActions:
+          type: array
+          items: { $ref: '#/components/schemas/ActionCandidate' }
+        createdAt: { type: string, format: date-time }
+
+    ApprovalDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision: { $ref: '#/components/schemas/ApprovalDecision' }
+        rationaleOverride: { type: string, nullable: true, example: null }
+
+    Approval:
+      type: object
+      properties:
+        approvalId: { type: string, format: uuid }
+        targetType: { type: string, enum: [recommendation, retraining_run] }
+        targetId: { type: string, format: uuid }
+        requestedBy: { type: string, format: uuid }
+        approver: { type: string, format: uuid, description: "Always distinct from requestedBy — enforced by API and DB constraint (BR-10)." }
+        decision: { $ref: '#/components/schemas/ApprovalDecision' }
+        rationaleOverride: { type: string, nullable: true }
+        decidedAt: { type: string, format: date-time }
+
+    SimulationRequest:
+      type: object
+      required: [batchId, parameter, adjustment]
+      properties:
+        batchId: { type: string, example: B1847 }
+        parameter: { type: string, example: firing_temperature_variance }
+        adjustment: { type: string, example: reduce_by_baseline_delta }
+
+    SimulationResult:
+      type: object
+      properties:
+        batchId: { type: string, example: B1847 }
+        currentDefectRatePct: { type: number, format: float, example: 8.4 }
+        predictedDefectRatePct: { type: number, format: float, example: 5.6 }
+        predictedImprovementPts: { type: number, format: float, example: 2.8 }
+        disclaimer: { type: string, example: "Predicted outcome — not a guaranteed result (FR-10)." }
+
+    ModelVersion:
+      type: object
+      properties:
+        modelVersionId: { type: string, format: uuid }
+        modelName: { type: string, example: el-inspection-cv }
+        version: { type: string, example: "2.5" }
+        tenantId: { type: string, format: uuid }
+        trainedOnDate: { type: string, format: date }
+        holdoutMetric: { type: number, format: float, example: 0.93 }
+        status: { type: string, enum: [staged, production, retired] }
+        approvedBy: { type: string, format: uuid, nullable: true }
+
+    RetrainingRunCreateRequest:
+      type: object
+      required: [modelName, triggerType]
+      properties:
+        modelName: { type: string, example: el-inspection-cv }
+        triggerType: { type: string, enum: [scheduled, drift_alert, manual, taxonomy_change] }
+
+    RetrainingRun:
+      type: object
+      properties:
+        runId: { type: string, example: RUN-2210 }
+        modelVersionId: { type: string, format: uuid }
+        requestedBy: { type: string, format: uuid }
+        triggerType: { type: string, enum: [scheduled, drift_alert, manual, taxonomy_change] }
+        status: { $ref: '#/components/schemas/RetrainingStatus' }
+        holdoutResult: { type: number, format: float, nullable: true, example: 0.93 }
+        canaryResult: { type: number, format: float, nullable: true, example: 0.02 }
+        createdAt: { type: string, format: date-time }
+
+    DefectTaxonomyEntry:
+      type: object
+      properties:
+        taxonomyId: { type: string, example: micro_crack_edge }
+        category: { type: string, example: Micro-crack }
+        subtype: { type: string, example: Edge-induced }
+        severity: { $ref: '#/components/schemas/Severity' }
+        rootCauseFamily: { type: string, example: "Firing thermal shock" }
+        suggestedAction: { type: string, example: "Review firing ramp rate" }
+        taxonomyVersion: { type: string, example: v1.3 }
+
+    TaxonomyVersionCreateRequest:
+      type: object
+      required: [changelog, entries]
+      properties:
+        changelog: { type: string, example: "Split Finger interruption into two subtypes." }
+        basedOnVersionId: { type: string, nullable: true }
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/DefectTaxonomyEntry' }
+
+    TaxonomyVersion:
+      type: object
+      properties:
+        versionId: { type: string, example: v1.4 }
+        publishedAt: { type: string, format: date-time }
+        publishedBy: { type: string, format: uuid }
+        changelog: { type: string }
+        compatibilityIssues:
+          type: array
+          items: { type: string, example: "Model class 'finger_break' has no match in v1.4 — retraining review queued." }
+
+    AutonomyConfig:
+      type: object
+      properties:
+        lineId: { type: string, example: L2 }
+        autonomyLevel: { $ref: '#/components/schemas/AutonomyLevel' }
+        failClosedOverride: { type: boolean, default: false }
+        updatedBy: { type: string, format: uuid }
+
+    SafetyConstraint:
+      type: object
+      properties:
+        constraintId: { type: string, format: uuid }
+        lineId: { type: string, example: L2 }
+        description: { type: string, example: "No auto-suggested component replacement outside a declared maintenance window." }
+        ruleExpression: { type: string, example: "action.type != 'replace_component' OR maintenance_window.active" }
+
+    AuditLogEntry:
+      type: object
+      properties:
+        eventId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        actor: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        action: { type: string, example: approve_recommendation }
+        targetType: { type: string, example: recommendation }
+        targetId: { type: string, example: rec-3391 }
+        beforeState: { type: object, nullable: true }
+        afterState: { type: object, nullable: true }

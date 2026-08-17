@@ -1,0 +1,358 @@
+<title>CellMind</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --paper:#F3F5F6; --paper-raised:#FFFFFF;
+    --ink:#0A0E13; --ink-soft:#3C4650; --ink-mute:#6B7680;
+    --line:#D6DCE1; --line-soft:#E6EAED;
+    --accent:#0E8F85; --accent-soft:#DEF4F1; --accent-ink:#07443F; --accent-glow:rgba(14,143,133,.25);
+    --furnace:#B75E17; --furnace-soft:#FBE7D3; --furnace-ink:#5C2E0B; --furnace-glow:rgba(183,94,23,.22);
+    --danger:#B23327; --danger-soft:#FBE1DD; --danger-ink:#5C1B14;
+    --good:#2A7A50; --good-soft:#E1F1E7; --good-ink:#153F29;
+    --radius-sm:3px; --radius-md:6px; --radius-lg:14px;
+    --shadow-2:0 8px 28px rgba(10,14,19,.16);
+    --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+    --motion-reveal:450ms; --motion-hero:650ms;
+    --ease-out:cubic-bezier(.16,1,.3,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#080B0F; --paper-raised:#12181F;
+      --ink:#EDF1F3; --ink-soft:#B7C0C7; --ink-mute:#7C8790;
+      --line:#232B33; --line-soft:#1B222A;
+      --accent:#49D9CB; --accent-soft:#102E2B; --accent-ink:#9CEEE4; --accent-glow:rgba(73,217,203,.20);
+      --furnace:#EE9C4C; --furnace-soft:#2E2011; --furnace-ink:#F7C58C; --furnace-glow:rgba(238,156,76,.18);
+      --danger:#EC6B5C; --danger-soft:#301715; --danger-ink:#F5A99C;
+      --good:#57C182; --good-soft:#12291B; --good-ink:#9CE0B7;
+      --shadow-2:0 8px 32px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#080B0F; --paper-raised:#12181F;
+    --ink:#EDF1F3; --ink-soft:#B7C0C7; --ink-mute:#7C8790;
+    --line:#232B33; --line-soft:#1B222A;
+    --accent:#49D9CB; --accent-soft:#102E2B; --accent-ink:#9CEEE4; --accent-glow:rgba(73,217,203,.20);
+    --furnace:#EE9C4C; --furnace-soft:#2E2011; --furnace-ink:#F7C58C; --furnace-glow:rgba(238,156,76,.18);
+    --danger:#EC6B5C; --danger-soft:#301715; --danger-ink:#F5A99C;
+    --good:#57C182; --good-soft:#12291B; --good-ink:#9CE0B7;
+    --shadow-2:0 8px 32px rgba(0,0,0,.6);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .reveal{transition:none !important; opacity:1 !important; transform:none !important;}
+    .blob{animation:none !important;}
+    .cursor-blink{animation:none !important;}
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{background:var(--paper); color:var(--ink); font-family:var(--font-ui); line-height:1.55; -webkit-font-smoothing:antialiased; overflow-x:hidden;}
+  .mono{font-family:var(--font-mono);}
+  .tabular{font-variant-numeric:tabular-nums;}
+  a{color:inherit;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+  @media (max-width:640px){ .wrap{padding:0 18px;} }
+  h1,h2,h3{text-wrap:balance; margin:0;}
+
+  /* ---- nav ---- */
+  nav.top{position:sticky; top:0; z-index:20; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); background:color-mix(in srgb, var(--paper) 82%, transparent); border-bottom:1px solid var(--line-soft);}
+  nav.top .inner{display:flex; align-items:center; justify-content:space-between; padding:14px 24px; max-width:1080px; margin:0 auto;}
+  .brand{display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; letter-spacing:-.01em;}
+  .brand .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--accent-glow);}
+  .navlinks{display:flex; gap:26px; font-size:13px; color:var(--ink-soft);}
+  .navlinks a{text-decoration:none;}
+  .navlinks a:hover{color:var(--ink);}
+  @media (max-width:760px){ .navlinks{display:none;} }
+  .btn{font-size:13.5px; font-weight:600; border-radius:var(--radius-sm); padding:9px 16px; border:1px solid transparent; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:transform 120ms var(--ease-out);}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--accent); color:var(--paper);}
+  .btn-secondary{background:transparent; border-color:var(--line); color:var(--ink);}
+  .theme-toggle{border:1px solid var(--line); background:var(--paper-raised); color:var(--ink); border-radius:var(--radius-sm); padding:7px 10px; font:11px var(--font-mono); cursor:pointer;}
+
+  /* ---- hero ---- */
+  .hero{position:relative; padding:110px 0 90px; overflow:hidden;}
+  .blob{position:absolute; border-radius:50%; filter:blur(60px); opacity:.55; pointer-events:none;}
+  .blob-a{width:480px; height:480px; background:var(--accent-glow); top:-160px; left:-120px; animation:drift1 22s ease-in-out infinite;}
+  .blob-b{width:420px; height:420px; background:var(--furnace-glow); top:-40px; right:-140px; animation:drift2 26s ease-in-out infinite;}
+  @keyframes drift1{ 0%,100%{transform:translate(0,0);} 50%{transform:translate(40px,50px);} }
+  @keyframes drift2{ 0%,100%{transform:translate(0,0);} 50%{transform:translate(-50px,30px);} }
+
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font:12px var(--font-mono); color:var(--accent-ink); background:var(--accent-soft); border-radius:100px; padding:5px 12px 5px 10px;}
+  .cursor-blink{animation:blink 1s step-end infinite;}
+  @keyframes blink{ 50%{opacity:0;} }
+
+  .hero h1{font-size:clamp(34px,6vw,58px); font-weight:700; letter-spacing:-.02em; margin:22px 0 20px; max-width:16ch;}
+  .hero h1 .accentline{color:var(--accent);}
+  .hero p.lede{font-size:17px; color:var(--ink-soft); max-width:52ch; margin:0 0 32px;}
+  .hero-ctas{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:56px;}
+
+  .readout{position:relative; z-index:1; max-width:640px; border:1px solid var(--line); border-radius:var(--radius-lg); background:var(--paper-raised); box-shadow:var(--shadow-2); overflow:hidden;}
+  .readout .bar{display:flex; gap:6px; padding:10px 14px; border-bottom:1px solid var(--line-soft);}
+  .readout .bar span{width:8px; height:8px; border-radius:50%; background:var(--line);}
+  .readout .body{padding:18px 20px 22px; font:13px var(--font-mono); color:var(--ink-soft); min-height:168px;}
+  .readout .line{margin:0 0 8px; opacity:0;}
+  .readout .line.shown{opacity:1;}
+  .readout .k{color:var(--ink-mute);}
+  .readout .v{color:var(--ink); font-weight:600;}
+  .readout .v.bad{color:var(--danger-ink);}
+  .readout .v.good{color:var(--good-ink);}
+
+  /* ---- generic section ---- */
+  section{padding:88px 0;}
+  .eyebrow-h{font:11.5px var(--font-mono); text-transform:uppercase; letter-spacing:.08em; color:var(--ink-mute); margin-bottom:10px; display:block;}
+  h2.sec{font-size:clamp(24px,4vw,34px); font-weight:700; letter-spacing:-.01em; max-width:20ch;}
+  p.sec-sub{color:var(--ink-soft); font-size:15.5px; max-width:56ch; margin:14px 0 0;}
+
+  .reveal{opacity:0; transform:translateY(24px); transition:opacity var(--motion-reveal) var(--ease-out), transform var(--motion-reveal) var(--ease-out);}
+  .reveal.in{opacity:1; transform:translateY(0);}
+
+  /* ---- problem chain ---- */
+  .chain{display:flex; gap:0; overflow-x:auto; margin-top:44px; padding-bottom:8px;}
+  .chain .node{flex:none; width:150px; text-align:center; position:relative; padding-top:0;}
+  .chain .node .box{border:1px solid var(--line); border-radius:var(--radius-md); background:var(--paper-raised); padding:14px 10px; font-size:12.5px; color:var(--ink-soft); min-height:56px; display:flex; align-items:center; justify-content:center;}
+  .chain .arrow{flex:none; width:26px; display:flex; align-items:center; justify-content:center; color:var(--ink-mute);}
+  .stat-line{margin-top:28px; font-size:15px; color:var(--ink-soft);}
+  .stat-line b{color:var(--ink);}
+
+  /* ---- pipeline (solution) ---- */
+  .pipeline{display:flex; gap:0; margin-top:48px; overflow-x:auto;}
+  .pl-step{flex:1; min-width:130px; text-align:center; position:relative; padding-top:0;}
+  .pl-step .node{width:38px; height:38px; border-radius:50%; background:var(--accent-soft); color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font:13px var(--font-mono); font-weight:700; margin:0 auto 10px; border:1px solid var(--accent);}
+  .pl-step .lbl{font-size:12.5px; font-weight:600;}
+  .pl-step .ln{position:absolute; top:19px; left:0; right:0; height:1px; background:var(--line); z-index:-1;}
+  .pl-step:first-child .ln{left:50%;} .pl-step:last-child .ln{right:50%;}
+
+  /* ---- agent cards ---- */
+  .agentgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-top:44px;}
+  .spot{position:relative; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--paper-raised); padding:18px; overflow:hidden;}
+  .spot::before{content:""; position:absolute; inset:0; background:radial-gradient(180px circle at var(--mx,50%) var(--my,50%), var(--accent-glow), transparent 60%); opacity:0; transition:opacity 220ms; pointer-events:none;}
+  .spot:hover::before{opacity:1;}
+  .spot .idx{font:11px var(--font-mono); color:var(--ink-mute);}
+  .spot h4{font-size:14px; margin:6px 0 6px;}
+  .spot p{font-size:12.5px; color:var(--ink-soft); margin:0; position:relative; z-index:1;}
+
+  /* ---- proof stats ---- */
+  .statgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-top:44px;}
+  .statcard{border:1px solid var(--line); border-radius:var(--radius-md); background:var(--paper-raised); padding:20px;}
+  .statcard .n{font-size:32px; font-weight:700; font-family:var(--font-mono);}
+  .statcard .n.furnace-clr{color:var(--furnace-ink);}
+  .statcard .n.good-clr{color:var(--good-ink);}
+  .statcard .lbl{font-size:12px; color:var(--ink-mute); margin-top:4px;}
+
+  /* ---- capability cards ---- */
+  .capgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:44px;}
+  .capcard{position:relative; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--paper-raised); padding:20px; overflow:hidden;}
+  .capcard::before{content:""; position:absolute; inset:0; background:radial-gradient(200px circle at var(--mx,50%) var(--my,50%), var(--furnace-glow), transparent 60%); opacity:0; transition:opacity 220ms; pointer-events:none;}
+  .capcard:hover::before{opacity:1;}
+  .capcard .tag{font:10.5px var(--font-mono); color:var(--ink-mute); position:relative; z-index:1;}
+  .capcard h4{font-size:14px; margin:8px 0 6px; position:relative; z-index:1;}
+  .capcard p{font-size:12.5px; color:var(--ink-soft); margin:0; position:relative; z-index:1;}
+
+  /* ---- final cta ---- */
+  .finalcta{text-align:center; padding:100px 0 120px;}
+  .finalcta .tagline{font-size:clamp(22px,4vw,32px); font-weight:700; max-width:26ch; margin:0 auto 28px; letter-spacing:-.01em;}
+  footer{border-top:1px solid var(--line-soft); padding:28px 0 60px; font-size:12px; color:var(--ink-mute); text-align:center;}
+</style>
+
+<nav class="top">
+  <div class="inner">
+    <div class="brand"><span class="dot"></span>CellMind</div>
+    <div class="navlinks">
+      <a href="#problem">Problem</a><a href="#solution">Solution</a><a href="#agents">How it works</a><a href="#proof">Proof</a><a href="#capabilities">Capabilities</a>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="theme-toggle" id="themeToggle" type="button">◐</button>
+      <a class="btn btn-primary" href="#proof">See the investigation</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <span class="blob blob-a"></span><span class="blob blob-b"></span>
+  <span class="eyebrow mono">SYNAPT AGENT HUB<span class="cursor-blink">_</span></span>
+  <h1>Don't just detect the defect.<br><span class="accentline">Find why it happened.</span></h1>
+  <p class="lede">CellMind combines EL inspection, process telemetry, equipment history and enterprise context so AI agents can trace a solar-cell defect back to its cause, explain the evidence, and recommend the fix — before the next batch fails.</p>
+  <div class="hero-ctas">
+    <a class="btn btn-primary" href="#proof">Walk through a real investigation</a>
+    <a class="btn btn-secondary" href="#agents">How the agents work</a>
+  </div>
+
+  <div class="readout mono" id="readout">
+    <div class="bar"><span></span><span></span><span></span></div>
+    <div class="body" id="readoutBody"></div>
+  </div>
+</header>
+
+<section id="problem" class="wrap">
+  <span class="eyebrow-h reveal">THE PROBLEM</span>
+  <h2 class="sec reveal">Root-cause analysis is still a manual chase across six disconnected systems.</h2>
+  <p class="sec-sub reveal">Inspection images, process parameters, equipment logs, maintenance records and SOPs each live in their own tool. Nothing connects them until an engineer does it by hand — after the batch is already lost.</p>
+
+  <div class="chain reveal" id="chain">
+    <div class="node"><div class="box">Manufacturing Batch</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="box">Final Inspection</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="box">Defects Identified</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="box">Manual Investigation</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="box">Corrective Action</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="box">Next batch, same risk</div></div>
+  </div>
+  <p class="stat-line reveal">By the time a root cause is confirmed by hand, <b>the batch that caused it is already finished.</b></p>
+</section>
+
+<section id="solution" class="wrap">
+  <span class="eyebrow-h reveal">THE SOLUTION</span>
+  <h2 class="sec reveal">One closed loop, run by agents, reviewed by engineers.</h2>
+  <p class="sec-sub reveal">CellMind moves the process from Detect → Reject to a full diagnostic loop — evidence-based at every step, never a black box.</p>
+  <div class="pipeline" id="pipeline">
+    <div class="pl-step reveal"><span class="ln"></span><div class="node">1</div><div class="lbl">Detect</div></div>
+    <div class="pl-step reveal"><span class="ln"></span><div class="node">2</div><div class="lbl">Trace</div></div>
+    <div class="pl-step reveal"><span class="ln"></span><div class="node">3</div><div class="lbl">Explain</div></div>
+    <div class="pl-step reveal"><span class="ln"></span><div class="node">4</div><div class="lbl">Optimize</div></div>
+    <div class="pl-step reveal"><span class="ln"></span><div class="node">5</div><div class="lbl">Prevent</div></div>
+    <div class="pl-step reveal"><span class="ln"></span><div class="node">6</div><div class="lbl">Learn</div></div>
+  </div>
+</section>
+
+<section id="agents" class="wrap">
+  <span class="eyebrow-h reveal">HOW IT WORKS</span>
+  <h2 class="sec reveal">Seven specialized agents, one investigation.</h2>
+  <p class="sec-sub reveal">Orchestrated by Synapt Agent Hub — Inspection and Process run in parallel; Root Cause never speaks until both, plus history, have reported in.</p>
+  <div class="agentgrid" id="agentgrid">
+    <div class="spot reveal"><div class="idx mono">01</div><h4>Inspection</h4><p>Reads the EL image — defect probability, severity, confidence.</p></div>
+    <div class="spot reveal"><div class="idx mono">02</div><h4>Process</h4><p>Flags process parameters outside baseline.</p></div>
+    <div class="spot reveal"><div class="idx mono">03</div><h4>Context</h4><p>Retrieves similar historical batches and SOPs.</p></div>
+    <div class="spot reveal"><div class="idx mono">04</div><h4>Root Cause</h4><p>Combines all evidence into a probable — never proven — cause.</p></div>
+    <div class="spot reveal"><div class="idx mono">05</div><h4>Optimization</h4><p>Generates and ranks corrective actions by cost and impact.</p></div>
+    <div class="spot reveal"><div class="idx mono">06</div><h4>Simulation</h4><p>Predicts the outcome of each action before it's approved.</p></div>
+    <div class="spot reveal"><div class="idx mono">07</div><h4>Validation</h4><p>Compares predicted vs. actual once the next batch runs.</p></div>
+  </div>
+</section>
+
+<section id="proof" class="wrap">
+  <span class="eyebrow-h reveal">PROOF — BATCH B1847</span>
+  <h2 class="sec reveal">A furnace nobody had flagged, caught in one pass.</h2>
+  <p class="sec-sub reveal">73% of a batch's defective cells traced to Furnace F07 — a defect <em>rate</em> of 25.6%, well above the plant average, not just a high share of volume.</p>
+  <div class="statgrid" id="statgrid">
+    <div class="statcard reveal"><div class="n tabular" data-count="87">0</div><div class="lbl">% defect probability, Cell C392</div></div>
+    <div class="statcard reveal"><div class="n tabular furnace-clr" data-count="256" data-decimals="1">0</div><div class="lbl">% defect rate at Furnace F07</div></div>
+    <div class="statcard reveal"><div class="n tabular" data-count="91">0</div><div class="lbl">% root-cause confidence</div></div>
+    <div class="statcard reveal"><div class="n tabular good-clr" data-count="28" data-decimals="1">0</div><div class="lbl">pt predicted yield improvement</div></div>
+  </div>
+  <p class="stat-line reveal">Recommended: <b>adjust the F07 firing profile</b>. Predicted defect rate falls from 8.4% to 5.6% — shown as a prediction, never a guarantee, and requiring an engineer's sign-off before it's recorded.</p>
+</section>
+
+<section id="capabilities" class="wrap">
+  <span class="eyebrow-h reveal">BEYOND ONE INVESTIGATION</span>
+  <h2 class="sec reveal">Built to run on the floor, not just in a demo.</h2>
+  <div class="capgrid" id="capgrid">
+    <div class="capcard reveal"><div class="tag">FR-18</div><h4>Live camera ingestion</h4><p>RTSP and system cameras feed inspection directly — EL-capable devices only.</p></div>
+    <div class="capcard reveal"><div class="tag">FR-19</div><h4>Governed retraining</h4><p>Drift-triggered, holdout-evaluated, staged rollout. Requester never approves their own run.</p></div>
+    <div class="capcard reveal"><div class="tag">FR-20</div><h4>Configurable autonomy</h4><p>Recommend-only or auto-suggest-with-approval. Closed-loop stays locked until a safety case exists.</p></div>
+    <div class="capcard reveal"><div class="tag">FR-21</div><h4>Versioned taxonomy</h4><p>Every defect maps to a root-cause family and a suggested action — auditable across versions.</p></div>
+    <div class="capcard reveal"><div class="tag">FR-22</div><h4>Role-based access</h4><p>Seven roles, tenant-scoped, with segregation of duties baked into the schema — not just policy.</p></div>
+  </div>
+</section>
+
+<section class="finalcta wrap">
+  <div class="tagline reveal">"Don't just detect the defect. Find why it happened — and prevent the next batch from failing."</div>
+  <a class="btn btn-primary" href="#problem" style="padding:12px 22px; font-size:14.5px;">Start from the problem ↑</a>
+</section>
+
+<footer>
+  Synapt Agent Hub · Synapt Data Transformation · Synapt Context Substrate — CellMind Solution Suite: Design System · Wireframes · API Reference
+</footer>
+
+<script>
+  var themeBtn = document.getElementById('themeToggle');
+  themeBtn.addEventListener('click', function(){
+    var root = document.documentElement;
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var cur = root.getAttribute('data-theme');
+    var effectiveIsDark = cur ? cur === 'dark' : prefersDark;
+    root.setAttribute('data-theme', effectiveIsDark ? 'light' : 'dark');
+  });
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* scroll reveal with stagger, per-section */
+  if('IntersectionObserver' in window){
+    var sections = document.querySelectorAll('section, header.hero');
+    sections.forEach(function(sec){
+      var items = Array.prototype.slice.call(sec.querySelectorAll('.reveal'));
+      var obs = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if(entry.isIntersecting){
+            items.forEach(function(el, i){
+              setTimeout(function(){ el.classList.add('in'); }, reduceMotion ? 0 : i * 80);
+            });
+            obs.disconnect();
+          }
+        });
+      }, { threshold: 0.2 });
+      obs.observe(sec);
+    });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('in'); });
+  }
+
+  /* spotlight hover on agent/capability cards */
+  document.querySelectorAll('.spot, .capcard').forEach(function(card){
+    card.addEventListener('mousemove', function(e){
+      var r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  });
+
+  /* count-up stats */
+  function countUp(el){
+    var target = parseFloat(el.dataset.count);
+    var decimals = parseInt(el.dataset.decimals || '0', 10);
+    var divisor = decimals ? Math.pow(10, decimals) : 1;
+    var displayTarget = target / divisor;
+    if(reduceMotion){ el.textContent = displayTarget.toFixed(decimals); return; }
+    var start = null, duration = 900;
+    function step(ts){
+      if(!start) start = ts;
+      var p = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = (displayTarget * eased).toFixed(decimals);
+      if(p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if('IntersectionObserver' in window){
+    var statObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){ countUp(entry.target); statObs.unobserve(entry.target); }
+      });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('.statcard .n').forEach(function(el){ statObs.observe(el); });
+  }
+
+  /* hero terminal readout typing sequence */
+  var lines = [
+    ['Batch', 'B1847', ''],
+    ['Defect Probability', '87%', 'bad'],
+    ['Confidence', '91%', 'good'],
+    ['Probable Cause', 'F07 firing-process variation', ''],
+    ['Predicted Improvement', '+2.8 pts yield', 'good']
+  ];
+  var body = document.getElementById('readoutBody');
+  function typeLines(){
+    body.innerHTML = '';
+    lines.forEach(function(l, i){
+      var div = document.createElement('div');
+      div.className = 'line';
+      div.innerHTML = '<span class="k">' + l[0] + ':</span> <span class="v ' + l[2] + '">' + l[1] + '</span>';
+      body.appendChild(div);
+      setTimeout(function(){ div.classList.add('shown'); }, reduceMotion ? 0 : 280 * i + 200);
+    });
+  }
+  typeLines();
+</script>
