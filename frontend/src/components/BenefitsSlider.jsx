@@ -33,9 +33,12 @@ export default function BenefitsSlider({ slides, interval = 5500 }) {
     <div
       onMouseEnter={() => (hovering.current = true)}
       onMouseLeave={() => (hovering.current = false)}
-      style={{ maxWidth: 640, margin: "0 auto" }}
+      style={{ maxWidth: 680, margin: "0 auto" }}
     >
-      <div className="card" style={{ position: "relative", minHeight: 190, overflow: "hidden" }}>
+      <div className="card" style={{ position: "relative", minHeight: 220, overflow: "hidden", textAlign: "left" }}>
+        <div className="mono" style={{ position: "absolute", top: 18, right: 20, fontSize: 11, color: "var(--ink-mute)" }}>
+          {String(index + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+        </div>
         <AnimatePresence mode="wait" custom={dir} initial={false}>
           <motion.div
             key={index}
@@ -46,23 +49,38 @@ export default function BenefitsSlider({ slides, interval = 5500 }) {
             exit="exit"
             transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="icon-badge" style={{ width: 42, height: 42, borderRadius: 12, marginBottom: 14 }}>
+            <div className="icon-badge" style={{ width: 42, height: 42, borderRadius: 12, marginBottom: 16 }}>
               <Icon className="icon" style={{ width: 20, height: 20 }} />
             </div>
-            <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-mute)", letterSpacing: ".05em", marginBottom: 6 }}>
+            <div className="mono" style={{ fontSize: 10, color: "var(--ink-mute)", letterSpacing: ".06em", marginBottom: 8 }}>
               {slide.tag}
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 8px", color: "var(--ink)", textTransform: "none", letterSpacing: 0 }}>
-              {slide.title}
-            </h3>
-            <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: 0, maxWidth: "54ch" }}>{slide.body}</p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "6px 12px", alignItems: "baseline" }}>
+              <span className="chip chip-info" style={{ fontSize: 9.5 }}>FEATURE</span>
+              <h3 style={{ fontSize: 16.5, fontWeight: 700, margin: 0, color: "var(--ink)" }}>{slide.feature}</h3>
+              <span className="chip chip-good" style={{ fontSize: 9.5 }}>BENEFIT</span>
+              <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: 0, maxWidth: "50ch" }}>{slide.benefit}</p>
+            </div>
           </motion.div>
         </AnimatePresence>
+
+        {!reduceMotion && (
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "var(--line-soft)" }}>
+            <motion.div
+              key={`progress-${index}`}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: interval / 1000, ease: "linear" }}
+              style={{ height: "100%", background: "var(--accent-grad)", transformOrigin: "0% 50%" }}
+            />
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 18 }}>
         <button
-          type="button" aria-label="Previous benefit" className="btn btn-secondary"
+          type="button" aria-label="Previous" className="btn btn-secondary"
           style={{ padding: 8, borderRadius: "50%" }} onClick={() => go(index - 1, -1)}
         >
           <ChevronLeft className="icon" />
@@ -72,7 +90,7 @@ export default function BenefitsSlider({ slides, interval = 5500 }) {
             <button
               key={s.tag}
               type="button"
-              aria-label={`Go to benefit ${i + 1}: ${s.title}`}
+              aria-label={`Go to slide ${i + 1}: ${s.feature}`}
               aria-current={i === index}
               onClick={() => go(i, i > index ? 1 : -1)}
               style={{
@@ -83,7 +101,7 @@ export default function BenefitsSlider({ slides, interval = 5500 }) {
           ))}
         </div>
         <button
-          type="button" aria-label="Next benefit" className="btn btn-secondary"
+          type="button" aria-label="Next" className="btn btn-secondary"
           style={{ padding: 8, borderRadius: "50%" }} onClick={() => go(index + 1, 1)}
         >
           <ChevronRight className="icon" />

@@ -60,3 +60,8 @@ __pycache__/
 *.db
 
 .claude
+
+training_data
+ml/artifacts/
+backend/cellmind.db
+backend/static/

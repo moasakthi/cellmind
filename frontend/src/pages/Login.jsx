@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { FlaskConical, ShieldCheck, Sparkles } from "lucide-react";
 import { useAuth } from "../auth/AuthContext.jsx";
-import { ELScan, SunMark } from "../assets/Art.jsx";
+import { ELScan } from "../assets/Art.jsx";
 import AmbientOrbs from "../components/AmbientOrbs.jsx";
+import Logo from "../components/Logo.jsx";
 
 const ICONS = { "Quality Engineer": Sparkles, "ML Operations Lead": FlaskConical, "Platform Administrator": ShieldCheck };
 
@@ -46,7 +47,11 @@ export default function Login() {
           style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 360 }}
         >
           <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28, textDecoration: "none", color: "var(--ink)" }}>
-            <SunMark /> <b>CellMind</b>
+            <Logo size={26} />
+            <span className="brand-lockup">
+              <span className="brand-word"><span className="cell">Cell</span><span className="mind">Mind</span></span>
+              <span className="brand-tagline">Intelligent Yield Optimization</span>
+            </span>
           </Link>
           <h1 style={{ fontSize: 22, margin: "0 0 6px" }}>Sign in</h1>
           <p style={{ color: "var(--ink-mute)", fontSize: 13, margin: "0 0 22px" }}>RBAC-scoped access — your role controls what you can approve.</p>
@@ -90,7 +95,14 @@ export default function Login() {
         </motion.div>
       </div>
 
-      <div style={{ background: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+      <div style={{ background: "var(--ink)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          style={{ background: "#FFFFFF", borderRadius: 14, padding: "12px 20px", marginBottom: 32, boxShadow: "0 12px 32px rgba(0,0,0,.35)" }}
+        >
+          <img src="/logo-transparent.png" alt="CellMind — Intelligent Yield Optimization" style={{ height: 44, width: "auto", display: "block" }} />
+        </motion.div>
         <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
           <ELScan width={320} height={320} severity="HIGH" />
         </motion.div>

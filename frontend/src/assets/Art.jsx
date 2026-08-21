@@ -72,19 +72,3 @@ export function ELScan({ width = 240, height = 240, severity = "LOW", className 
     </svg>
   );
 }
-
-export function SunMark({ size = 22, className }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="4.5" fill="var(--accent)" />
-      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
-        <line
-          key={deg}
-          x1="12" y1="3.2" x2="12" y2="5.2"
-          stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round"
-          transform={`rotate(${deg} 12 12)`}
-        />
-      ))}
-    </svg>
-  );
-}

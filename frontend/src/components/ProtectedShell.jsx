@@ -3,7 +3,7 @@ import { LayoutDashboard, ScanEye, Search, ClipboardCheck, Camera, RefreshCw, Li
 import { useAuth } from "../auth/AuthContext.jsx";
 import ThemeSwitcher from "./ThemeSwitcher.jsx";
 import PageFade from "./PageFade.jsx";
-import { SunMark } from "../assets/Art.jsx";
+import Logo from "./Logo.jsx";
 
 const NAV = [
   { to: "/app", label: "Dashboard", end: true, icon: LayoutDashboard },
@@ -23,7 +23,13 @@ export default function ProtectedShell() {
   return (
     <div className="app">
       <nav className="sidebar">
-        <div className="brand"><SunMark size={18} /><span className="dot" />CellMind</div>
+        <div className="brand">
+          <Logo size={26} />
+          <span className="brand-lockup">
+            <span className="brand-word"><span className="cell">Cell</span><span className="mind">Mind</span></span>
+            <span className="brand-tagline">Intelligent Yield Optimization</span>
+          </span>
+        </div>
         {visible.map((item) => {
           const Icon = item.icon;
           return (
