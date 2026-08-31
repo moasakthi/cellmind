@@ -3,3 +3,9 @@ uvicorn>=0.34
 sqlalchemy>=2.0
 pydantic>=2.0
 email-validator>=2.0
+python-multipart>=0.0.9
+
+# ml_bridge.py imports ml/predict.py to run the trained classifier — see ml/requirements.txt
+torch>=2.12
+torchvision>=0.27
+pillow

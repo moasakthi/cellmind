@@ -1,14 +1,16 @@
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
+from ml_bridge import classify
 from models import (
     AuditLogEntry, AutonomyConfig, Batch, Camera, Cell, DefectTaxonomyEntry,
     Equipment, Investigation, ModelVersion, ProcessRecord, Recommendation,
@@ -24,7 +26,8 @@ from serialization import row_to_dict, rows_to_dicts
 
 Base.metadata.create_all(bind=engine)
 
-STATIC_DIR = Path(__file__).parent / "static"
+BACKEND_DIR = Path(__file__).parent
+STATIC_DIR = BACKEND_DIR / "static"
 (STATIC_DIR / "images").mkdir(parents=True, exist_ok=True)
 
 ADMIN_PERMS = {"manage_cameras", "configure_taxonomy", "manage_rbac"}
@@ -247,20 +250,56 @@ def inspect_cell(cell_id: str, db: Session = Depends(get_db)):
     cell = db.get(Cell, cell_id)
     if not cell:
         raise HTTPException(404, "cell not found")
-    prob = cell.defect_probability
-    if prob >= 0.5:
-        evidence = [{"sourceType": "image", "sourceRef": cell.cell_id,
-                     "description": f"Defect probability {round(prob * 100)}% — pattern consistent with "
-                                     f"{cell.severity.lower()}-severity taxonomy entry."}]
-        band = "HIGH" if cell.confidence >= 0.85 else "MEDIUM"
-    else:
-        evidence = [{"sourceType": "image", "sourceRef": cell.cell_id, "description": "No defect pattern above threshold."}]
-        band = "HIGH"
+
+    image_path = BACKEND_DIR / cell.image_path.lstrip("/")
+    try:
+        result = classify(image_path)
+    except FileNotFoundError:
+        raise HTTPException(503, "Fault classifier model not available — run `python ml/train.py` "
+                                  "in ml/ to generate artifacts/best_model.pt.")
+    except OSError:
+        raise HTTPException(422, "Image quality insufficient — unable to read EL scan (FR-03).")
+
+    cell.defect_probability = result["defectProbability"]
+    cell.severity = result["severity"]
+    cell.confidence = result["confidence"]
+    cell.taxonomy_id = result["taxonomyId"]
+    db.add(cell); db.commit()
+
+    band = "HIGH" if result["confidence"] >= 0.85 else ("MEDIUM" if result["confidence"] >= 0.6 else "LOW")
+    evidence = [{"sourceType": "image", "sourceRef": cell.cell_id,
+                 "description": f"Classifier predicts '{result['label']}' with "
+                                 f"{round(result['confidence'] * 100)}% confidence "
+                                 f"(defect probability {round(result['defectProbability'] * 100)}%)."}]
     return {
-        "agentName": "InspectionAgent", "result": {"defectProbability": prob, "severity": cell.severity},
-        "confidence": cell.confidence, "confidenceBand": band, "evidence": evidence,
+        "agentName": "InspectionAgent",
+        "result": {"defectProbability": result["defectProbability"], "severity": result["severity"]},
+        "confidence": result["confidence"], "confidenceBand": band, "evidence": evidence,
         "dataGaps": [], "oodFlag": cell.ood_flag,
     }
+
+
+@app.post("/inference/predict")
+async def predict_uploaded_image(file: UploadFile = File(...)):
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(422, "Uploaded file must be an image.")
+
+    suffix = Path(file.filename or "upload.jpg").suffix or ".jpg"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = Path(tmp.name)
+
+    try:
+        result = classify(tmp_path)
+    except FileNotFoundError:
+        raise HTTPException(503, "Fault classifier model not available — run `python ml/train.py` "
+                                  "in ml/ to generate artifacts/best_model.pt.")
+    except OSError:
+        raise HTTPException(422, "Image quality insufficient — unable to read uploaded image (FR-03).")
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    return result
 
 
 # ---------- Process & Equipment ----------

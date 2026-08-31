@@ -64,6 +64,16 @@ python predict.py <image>   # run inference with the trained model
 ```
 
 Last training run: **83.2% test accuracy, 0.827 macro-F1** (see `ml/artifacts/metrics.json`
-for the full per-class breakdown). This pipeline is standalone — it is not currently wired
-into the backend API; a handful of its source images are used as static sample photos in
-the seeded backend data instead.
+for the full per-class breakdown).
+
+The backend imports `ml/predict.py` directly (`backend/ml_bridge.py`) to run real
+inference — no separate service to deploy:
+
+- `POST /cells/{cellId}/inspect` reclassifies that cell's stored EL image with the trained
+  model and persists the live result (defect probability, severity, confidence).
+- `POST /inference/predict` accepts an uploaded photo (multipart `file` field) and returns a
+  live classification — not tied to any seeded cell. The frontend's Inference page exposes
+  this as an upload option.
+
+Both return `503` if `ml/artifacts/best_model.pt` hasn't been trained yet (run
+`python ml/train.py` first) and `422` if the image can't be read.

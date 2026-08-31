@@ -14,12 +14,26 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+async function upload(path, file) {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const err = new Error(body.detail || `Request failed: ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
 export const api = {
   login: (email, password) => request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   me: (asUser) => request(`/users/me${asUser ? `?as_user=${asUser}` : ""}`),
   listUsers: () => request("/rbac/users"),
   listRoles: () => request("/rbac/roles"),
   inspectCell: (cellId) => request(`/cells/${cellId}/inspect`, { method: "POST" }),
+  predictImage: (file) => upload("/inference/predict", file),
 
   listBatches: () => request("/batches"),
   getBatch: (id) => request(`/batches/${id}`),
