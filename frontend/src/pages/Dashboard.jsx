@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, ShieldAlert, Layers, ArrowUpRight } from "lucide-react";
 import { api } from "../api/client.js";
 import { useFetch } from "../api/useFetch.js";
@@ -15,10 +16,28 @@ const TREND = {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { data: batches, loading, error } = useFetch(() => api.listBatches(), []);
+  const [investigatingId, setInvestigatingId] = useState(null);
+  const [investigateError, setInvestigateError] = useState(null);
 
   if (loading) return <p className="loading">Loading batches…</p>;
   if (error) return <p className="error-box">Failed to load batches: {error.message}</p>;
+
+  async function investigate(batchId) {
+    setInvestigatingId(batchId);
+    setInvestigateError(null);
+    try {
+      const { items } = await api.listInvestigations();
+      const existing = items.find((i) => i.batchId === batchId);
+      const inv = existing || (await api.createInvestigation({ batchId }));
+      navigate(`/app/investigation/${inv.investigationId}`);
+    } catch (e) {
+      setInvestigateError(`Batch ${batchId}: ${e.message}`);
+    } finally {
+      setInvestigatingId(null);
+    }
+  }
 
   const totalCells = batches.reduce((s, b) => s + b.cellCount, 0);
   const totalDefects = batches.reduce((s, b) => s + b.defectCount, 0);
@@ -64,6 +83,7 @@ export default function Dashboard() {
 
       <div className="card">
         <h3>Recent Batches</h3>
+        {investigateError && <div className="alert alert-bad" style={{ marginBottom: 10 }}>{investigateError}</div>}
         <div className="table-wrap">
           <table>
             <thead>
@@ -81,7 +101,13 @@ export default function Dashboard() {
                   <td>{riskChip(b.riskLevel)}</td>
                   <td>
                     {b.riskLevel === "HIGH" ? (
-                      <Link className="btn btn-primary" to="/app/investigation">Investigate</Link>
+                      <button
+                        className="btn btn-primary"
+                        disabled={investigatingId === b.batchId}
+                        onClick={() => investigate(b.batchId)}
+                      >
+                        {investigatingId === b.batchId ? "Opening…" : "Investigate"}
+                      </button>
                     ) : (
                       <span style={{ color: "var(--ink-mute)", fontSize: 12 }}>—</span>
                     )}

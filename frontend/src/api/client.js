@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_URL || "http://localhost:8010";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
@@ -46,10 +46,13 @@ export const api = {
   createCamera: (payload) => request("/cameras", { method: "POST", body: JSON.stringify(payload) }),
   cameraHealth: (id) => request(`/cameras/${id}/health`),
 
+  listInvestigations: () => request("/investigations"),
   getInvestigation: (id) => request(`/investigations/${id}`),
+  createInvestigation: (payload) => request("/investigations", { method: "POST", body: JSON.stringify(payload) }),
   getRecommendation: (investigationId) => request(`/recommendations/${investigationId}`),
   approveRecommendation: (id, payload) =>
     request(`/recommendations/${id}/approve`, { method: "POST", body: JSON.stringify(payload) }),
+  runSimulation: (payload) => request("/simulations", { method: "POST", body: JSON.stringify(payload) }),
 
   listRuns: () => request("/retraining/runs"),
   approveRun: (id, payload) =>

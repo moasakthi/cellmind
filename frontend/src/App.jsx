@@ -29,7 +29,9 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="inference" element={<Inference />} />
         <Route path="investigation" element={<Investigation />} />
+        <Route path="investigation/:investigationId" element={<Investigation />} />
         <Route path="recommendation" element={<Recommendation />} />
+        <Route path="recommendation/:investigationId" element={<Recommendation />} />
         <Route path="cameras" element={<Cameras />} />
         <Route path="retraining" element={<Retraining />} />
         <Route path="taxonomy" element={<Taxonomy />} />

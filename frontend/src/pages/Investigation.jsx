@@ -1,3 +1,4 @@
+import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import { useFetch } from "../api/useFetch.js";
 
@@ -9,18 +10,36 @@ function bandChip(band) {
   return <span className={`chip dot ${cls}`}>{band}</span>;
 }
 
+async function loadInvestigation(investigationId) {
+  if (investigationId) return api.getInvestigation(investigationId);
+  const { items } = await api.listInvestigations();
+  if (!items.length) return null;
+  return api.getInvestigation(items[0].investigationId);
+}
+
 export default function Investigation() {
-  const { data: inv, loading, error } = useFetch(() => api.getInvestigation("inv-1"), []);
+  const { investigationId } = useParams();
+  const { data: inv, loading, error } = useFetch(() => loadInvestigation(investigationId), [investigationId]);
 
   if (loading) return <p className="loading">Running Agent Hub pipeline…</p>;
   if (error) return <p className="error-box">Failed to load investigation: {error.message}</p>;
+  if (!inv) {
+    return (
+      <p className="page-sub">
+        No investigations yet — trigger one from a batch on the <Link to="/app">Dashboard</Link>.
+      </p>
+    );
+  }
 
   const rootCause = inv.agents.rootCause;
 
   return (
     <>
       <h1 className="page-title">Investigation — Batch {inv.batchId}</h1>
-      <p className="page-sub">Cell {inv.cellId} · status: {inv.status}</p>
+      <p className="page-sub">
+        Cell {inv.cellId} · status: {inv.status} ·{" "}
+        <Link to={`/app/recommendation/${inv.investigationId}`}>View recommendation →</Link>
+      </p>
 
       <div className="card" style={{ marginBottom: 14 }}>
         <h3>Agent Pipeline</h3>

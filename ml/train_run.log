@@ -1,0 +1,6 @@
+﻿Using device: cpu
+[phase A (head warmup)] epoch 1/5 train_loss=1.7403 train_f1=0.2702 val_loss=1.4255 val_f1=0.4579 *
+[phase A (head warmup)] epoch 2/5 train_loss=1.3818 train_f1=0.4725 val_loss=1.1852 val_f1=0.6238 *
+[phase A (head warmup)] epoch 3/5 train_loss=1.1366 train_f1=0.6148 val_loss=1.0552 val_f1=0.6923 *
+[phase A (head warmup)] epoch 4/5 train_loss=1.0069 train_f1=0.7179 val_loss=0.9485 val_f1=0.7209 *
+[phase A (head warmup)] epoch 5/5 train_loss=0.8724 train_f1=0.7361 val_loss=0.8371 val_f1=0.7145

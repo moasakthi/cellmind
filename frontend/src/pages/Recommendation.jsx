@@ -1,17 +1,70 @@
 import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import { useFetch } from "../api/useFetch.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 
+async function loadRecommendation(investigationId) {
+  let invId = investigationId;
+  if (!invId) {
+    const { items } = await api.listInvestigations();
+    if (!items.length) return null;
+    invId = items[0].investigationId;
+  }
+  try {
+    const rec = await api.getRecommendation(invId);
+    const inv = await api.getInvestigation(invId);
+    return { ...rec, batchId: inv.batchId };
+  } catch (e) {
+    if (e.status === 404) return null;
+    throw e;
+  }
+}
+
+const SIM_PARAMETERS = [
+  { value: "temperature", label: "Firing Temperature" },
+  { value: "gasFlow", label: "Gas Flow" },
+  { value: "pressure", label: "Pressure" },
+];
+
 export default function Recommendation() {
+  const { investigationId } = useParams();
   const { user, has } = useAuth();
-  const { data: rec, loading, error, reload } = useFetch(() => api.getRecommendation("inv-1"), []);
+  const { data: rec, loading, error, reload } = useFetch(() => loadRecommendation(investigationId), [investigationId]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [simParam, setSimParam] = useState("temperature");
+  const [simDirection, setSimDirection] = useState("reduce");
+  const [sim, setSim] = useState(null);
+  const [simBusy, setSimBusy] = useState(false);
   const canApprove = has("approve_quality_action") || has("approve_process_action") || has("approve_equipment_action");
 
   if (loading) return <p className="loading">Loading recommendation…</p>;
   if (error) return <p className="error-box">Failed to load recommendation: {error.message}</p>;
+  if (!rec) {
+    return (
+      <p className="page-sub">
+        No recommendation has been generated for this investigation yet
+        {investigationId && <> — see the <Link to={`/app/investigation/${investigationId}`}>investigation</Link> for details</>}.
+      </p>
+    );
+  }
+
+  async function runSimulation() {
+    setSimBusy(true);
+    try {
+      const result = await api.runSimulation({
+        batchId: rec.batchId,
+        parameter: simParam,
+        adjustment: `${simDirection} ${simParam}`,
+      });
+      setSim(result);
+    } catch (e) {
+      setMsg({ ok: false, text: e.message });
+    } finally {
+      setSimBusy(false);
+    }
+  }
 
   async function approve(decision) {
     setBusy(true);
@@ -53,17 +106,31 @@ export default function Recommendation() {
       <div className="grid cols-2">
         <div className="card">
           <h3>What-If Simulation</h3>
-          <div style={{ display: "flex", gap: 20 }}>
+          <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
             <div>
               <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-mute)" }}>CURRENT</div>
-              <div className="mono tabular" style={{ fontSize: 20 }}>{rec.simulation.currentDefectRatePct}%</div>
+              <div className="mono tabular" style={{ fontSize: 20 }}>{(sim ?? rec.simulation).currentDefectRatePct}%</div>
             </div>
             <div>
               <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-mute)" }}>PREDICTED</div>
-              <div className="mono tabular" style={{ fontSize: 20, color: "var(--good-ink)" }}>{rec.simulation.predictedDefectRatePct}%</div>
+              <div className="mono tabular" style={{ fontSize: 20, color: "var(--good-ink)" }}>{(sim ?? rec.simulation).predictedDefectRatePct}%</div>
             </div>
           </div>
-          <p style={{ fontSize: 11.5, color: "var(--ink-mute)", marginTop: 8 }}>{rec.simulation.disclaimer}</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+            <select value={simDirection} onChange={(e) => setSimDirection(e.target.value)}>
+              <option value="reduce">Reduce</option>
+              <option value="increase">Increase</option>
+            </select>
+            <select value={simParam} onChange={(e) => setSimParam(e.target.value)}>
+              {SIM_PARAMETERS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+            <button className="btn btn-secondary" disabled={simBusy} onClick={runSimulation}>
+              {simBusy ? "Running…" : "Run simulation"}
+            </button>
+          </div>
+          <p style={{ fontSize: 11.5, color: "var(--ink-mute)", marginTop: 8 }}>{(sim ?? rec.simulation).disclaimer}</p>
         </div>
 
         <div className="card">
