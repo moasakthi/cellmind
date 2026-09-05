@@ -245,6 +245,32 @@ def get_cell(cell_id: str, db: Session = Depends(get_db)):
     return row_to_dict(cell)
 
 
+def confidence_band(confidence: float) -> str:
+    return "HIGH" if confidence >= 0.85 else ("MEDIUM" if confidence >= 0.6 else "LOW")
+
+
+def build_inspection_response(result: dict, ref_id: str) -> dict:
+    """Shared InspectionAgent-style response for both the seeded-cell and
+    uploaded-photo classification paths (FR-02, FR-14, FR-15)."""
+    if result["oodFlag"]:
+        description = ("Unknown defect pattern detected — manual inspection required "
+                        f"(top-class confidence {round(result['confidence'] * 100)}% is below the "
+                        "out-of-distribution threshold; FR-15).")
+    else:
+        description = (f"Classifier predicts '{result['label']}' with "
+                        f"{round(result['confidence'] * 100)}% confidence "
+                        f"(defect probability {round(result['defectProbability'] * 100)}%).")
+
+    return {
+        "agentName": "InspectionAgent",
+        "result": {"defectProbability": result["defectProbability"], "severity": result["severity"],
+                    "label": result["label"]},
+        "confidence": result["confidence"], "confidenceBand": confidence_band(result["confidence"]),
+        "evidence": [{"sourceType": "image", "sourceRef": ref_id, "description": description}],
+        "dataGaps": [], "oodFlag": result["oodFlag"],
+    }
+
+
 @app.post("/cells/{cell_id}/inspect")
 def inspect_cell(cell_id: str, db: Session = Depends(get_db)):
     cell = db.get(Cell, cell_id)
@@ -264,19 +290,10 @@ def inspect_cell(cell_id: str, db: Session = Depends(get_db)):
     cell.severity = result["severity"]
     cell.confidence = result["confidence"]
     cell.taxonomy_id = result["taxonomyId"]
+    cell.ood_flag = result["oodFlag"]
     db.add(cell); db.commit()
 
-    band = "HIGH" if result["confidence"] >= 0.85 else ("MEDIUM" if result["confidence"] >= 0.6 else "LOW")
-    evidence = [{"sourceType": "image", "sourceRef": cell.cell_id,
-                 "description": f"Classifier predicts '{result['label']}' with "
-                                 f"{round(result['confidence'] * 100)}% confidence "
-                                 f"(defect probability {round(result['defectProbability'] * 100)}%)."}]
-    return {
-        "agentName": "InspectionAgent",
-        "result": {"defectProbability": result["defectProbability"], "severity": result["severity"]},
-        "confidence": result["confidence"], "confidenceBand": band, "evidence": evidence,
-        "dataGaps": [], "oodFlag": cell.ood_flag,
-    }
+    return build_inspection_response(result, cell.cell_id)
 
 
 @app.post("/inference/predict")
@@ -299,7 +316,7 @@ async def predict_uploaded_image(file: UploadFile = File(...)):
     finally:
         tmp_path.unlink(missing_ok=True)
 
-    return result
+    return build_inspection_response(result, file.filename or "upload")
 
 
 # ---------- Process & Equipment ----------

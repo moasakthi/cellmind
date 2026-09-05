@@ -63,7 +63,7 @@ python train.py             # two-phase fine-tune; writes artifacts/best_model.p
 python predict.py <image>   # run inference with the trained model
 ```
 
-Last training run: **83.2% test accuracy, 0.827 macro-F1** (see `ml/artifacts/metrics.json`
+Last training run: **82.4% test accuracy, 0.822 macro-F1** (see `ml/artifacts/metrics.json`
 for the full per-class breakdown).
 
 The backend imports `ml/predict.py` directly (`backend/ml_bridge.py`) to run real

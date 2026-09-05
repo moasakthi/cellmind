@@ -23,6 +23,10 @@ CLASS_TO_TAXONOMY = {
     "Snow-Covered": ("snow_covered", "MEDIUM"),
 }
 
+# FR-15: below this top-class confidence, treat the input as an unfamiliar
+# pattern rather than force it into one of the 6 known classes.
+OOD_CONFIDENCE_THRESHOLD = 0.5
+
 
 def classify(image_path):
     """Run the trained classifier and translate its output into CellMind's
@@ -41,4 +45,5 @@ def classify(image_path):
         "taxonomyId": taxonomy_id,
         "severity": severity,
         "defectProbability": round(1 - clean_prob, 4),
+        "oodFlag": prediction["confidence"] < OOD_CONFIDENCE_THRESHOLD,
     }
