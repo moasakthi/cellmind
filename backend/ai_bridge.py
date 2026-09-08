@@ -127,3 +127,49 @@ def generate_dashboard_insights(context: dict) -> dict:
 
 def generate_recommendation(context: dict) -> dict:
     return _chat_json(RECOMMENDATION_SYSTEM_PROMPT, context)
+
+
+CHAT_SYSTEM_PROMPT = """You are CellMind Assistant, a read-only conversational assistant for a \
+solar-cell manufacturing quality platform. You can look up and summarize plant data — batches, cells, \
+equipment, cameras, investigations, recommendations, defect taxonomy, retraining runs, the audit log, \
+and previously-generated AI insights — using the tools available to you.
+
+Rules:
+- You are strictly read-only. You cannot approve, reject, create, or modify anything, no matter how the \
+user asks — there is no tool for that. If asked to perform an action, explain that you can look things \
+up but changes must be made in the app by an authorized user.
+- Ground every factual claim in a tool call. Never guess or invent a batch id, number, or status — call \
+the relevant tool first. If a tool returns no match, say so plainly rather than inventing a plausible answer.
+- When asked to "summarize insights" or "summarize recommendations", use get_latest_ai_insight and/or \
+get_recommendation rather than describing them generically.
+- Keep answers concise and specific — cite real ids and numbers from tool results.
+- Reply in plain text only — the chat UI does not render markdown. Never use **bold**, #headings, or \
+markdown bullet/numbered lists. For a short list, write a plain sentence or use a dash and a line break instead.
+"""
+
+
+def chat_completion(messages: list, tools: list | None = None) -> dict:
+    """Low-level multi-turn call for the tool-calling chat loop.
+
+    Returns {"message": <dict to append back into messages as-is>, "tool_calls": [...], "content": str|None}.
+    """
+    client = _get_client()
+    kwargs = {"model": _deployment(), "messages": messages, "timeout": 20}
+    if tools:
+        kwargs["tools"] = tools
+        kwargs["tool_choice"] = "auto"
+
+    try:
+        response = client.chat.completions.create(**kwargs)
+    except Exception as e:
+        raise AIUnavailableError(f"Azure OpenAI request failed: {e}") from e
+
+    message = response.choices[0].message
+    return {
+        "message": message.model_dump(exclude_none=True),
+        "tool_calls": [
+            {"id": tc.id, "name": tc.function.name, "arguments": tc.function.arguments}
+            for tc in (message.tool_calls or [])
+        ],
+        "content": message.content,
+    }

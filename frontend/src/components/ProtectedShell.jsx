@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext.jsx";
 import ThemeSwitcher from "./ThemeSwitcher.jsx";
 import PageFade from "./PageFade.jsx";
 import Logo from "./Logo.jsx";
+import ChatWidget from "./ChatWidget.jsx";
 
 const NAV = [
   { to: "/app", label: "Dashboard", end: true, icon: LayoutDashboard },
@@ -57,6 +58,8 @@ export default function ProtectedShell() {
           </PageFade>
         </main>
       </div>
+
+      <ChatWidget />
     </div>
   );
 }

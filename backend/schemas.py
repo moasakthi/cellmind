@@ -78,3 +78,12 @@ class SafetyConstraintIn(ActingUserMixin):
     line_id: str = Field(alias="lineId")
     description: str
     rule_expression: str = Field(alias="ruleExpression")
+
+
+class ChatMessage(CamelModel):
+    role: str
+    content: str
+
+
+class ChatRequest(CamelModel):
+    messages: list[ChatMessage]

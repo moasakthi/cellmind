@@ -59,6 +59,8 @@ export const api = {
   generateInsights: () => request("/insights", { method: "POST" }),
   getLatestInsights: () => request("/insights/latest"),
 
+  chat: (messages) => request("/chat", { method: "POST", body: JSON.stringify({ messages }) }),
+
   listRuns: () => request("/retraining/runs"),
   approveRun: (id, payload) =>
     request(`/retraining/runs/${id}/approve`, { method: "POST", body: JSON.stringify(payload) }),

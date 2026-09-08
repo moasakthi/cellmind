@@ -1,3 +1,4 @@
+import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,7 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from ai_bridge import AIUnavailableError, current_model, generate_dashboard_insights, generate_recommendation
+from ai_bridge import (
+    AIUnavailableError, CHAT_SYSTEM_PROMPT, chat_completion, current_model,
+    generate_dashboard_insights, generate_recommendation,
+)
+from chat_tools import CHAT_TOOL_SCHEMAS, execute_tool
 from database import Base, engine, get_db
 from ml_bridge import classify
 from models import (
@@ -18,7 +23,7 @@ from models import (
     RetrainingRun, Role, SafetyConstraint, TaxonomyVersion, User,
 )
 from schemas import (
-    ApprovalDecisionRequest, AutonomyConfigIn, CameraCreateRequest,
+    ApprovalDecisionRequest, AutonomyConfigIn, CameraCreateRequest, ChatRequest,
     InvestigationCreateRequest, LoginRequest, RetrainingRunCreateRequest,
     RoleAssignRequest, SafetyConstraintIn, SimulationRequest,
     TaxonomyVersionCreateRequest,
@@ -616,6 +621,36 @@ def latest_insights(db: Session = Depends(get_db)):
     if not insight:
         raise HTTPException(404, "no AI insights generated yet")
     return row_to_dict(insight)
+
+
+MAX_CHAT_TOOL_ROUNDS = 5
+
+
+@app.post("/chat")
+def chat(payload: ChatRequest, db: Session = Depends(get_db)):
+    messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}]
+    messages += [{"role": m.role, "content": m.content} for m in payload.messages]
+
+    try:
+        for _ in range(MAX_CHAT_TOOL_ROUNDS):
+            result = chat_completion(messages, tools=CHAT_TOOL_SCHEMAS)
+            messages.append(result["message"])
+            if not result["tool_calls"]:
+                return {"role": "assistant", "content": result["content"] or ""}
+            for call in result["tool_calls"]:
+                try:
+                    args = json.loads(call["arguments"]) if call["arguments"] else {}
+                except json.JSONDecodeError:
+                    args = {}
+                tool_result = execute_tool(db, call["name"], args)
+                messages.append({
+                    "role": "tool", "tool_call_id": call["id"],
+                    "content": json.dumps(tool_result, default=str),
+                })
+    except AIUnavailableError as e:
+        raise HTTPException(503, f"CellMind Assistant unavailable: {e}")
+
+    return {"role": "assistant", "content": "I wasn't able to complete that request — try rephrasing or asking something more specific."}
 
 
 # ---------- Simulations ----------

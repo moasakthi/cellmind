@@ -436,6 +436,33 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /chat:
+    post:
+      tags: [AI Insights]
+      summary: Converse with CellMind Assistant, a read-only data-exploration chatbot
+      description: >-
+        Stateless — the client resends the full conversation each turn. The backend runs a
+        tool-calling loop against a fixed, read-only toolset (batches, cells, equipment, cameras,
+        investigations, recommendations, taxonomy, retraining runs, audit log, latest AI insight).
+        No create/update/delete tool exists — the assistant cannot approve, reject, create, or modify
+        anything, regardless of how it's asked.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatRequest' }
+      responses:
+        '200':
+          description: Assistant reply
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatMessage' }
+        '503':
+          description: CellMind Assistant unavailable (BR-11-style fail-open)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /simulations:
     post:
       tags: [Simulations]
@@ -1024,6 +1051,20 @@ components:
         findings:
           type: array
           items: { $ref: '#/components/schemas/AiFinding' }
+
+    ChatMessage:
+      type: object
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string }
+
+    ChatRequest:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items: { $ref: '#/components/schemas/ChatMessage' }
 
     ApprovalDecisionRequest:
       type: object
