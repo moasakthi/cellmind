@@ -111,6 +111,7 @@ class Recommendation(Base):
     filtered_actions = Column("filteredActions", JSON, nullable=False, default=list)
     simulation = Column("simulation", JSON, nullable=True)
     approval = Column("approval", JSON, nullable=True)
+    reasoning = Column("reasoning", String, nullable=True)
     created_at = Column("createdAt", String, nullable=False)
 
 
@@ -186,3 +187,15 @@ class SafetyConstraint(Base):
     line_id = Column("lineId", String, nullable=False)
     description = Column("description", String, nullable=False)
     rule_expression = Column("ruleExpression", String, nullable=False)
+
+
+class AiInsight(Base):
+    __tablename__ = "ai_insights"
+    insight_id = Column("insightId", String, primary_key=True)
+    tenant_id = Column("tenantId", String, nullable=False)
+    generated_at = Column("generatedAt", String, nullable=False)
+    generated_by = Column("generatedBy", String, nullable=True)
+    model = Column("model", String, nullable=False)
+    summary = Column("summary", String, nullable=False)
+    confidence_band = Column("confidenceBand", String, nullable=False)
+    findings = Column("findings", JSON, nullable=False, default=list)

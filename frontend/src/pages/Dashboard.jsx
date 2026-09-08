@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, ShieldAlert, Layers, ArrowUpRight, Wifi, WifiOff, Camera } from "lucide-react";
 import { api } from "../api/client.js";
@@ -20,6 +20,10 @@ function fmtDelta(delta) {
   return `${sign}${delta.toFixed(1)} pts`;
 }
 
+const SEVERITY_LEVELS = ["ALL", "HIGH", "MEDIUM", "LOW"];
+const SEVERITY_COLOR = { HIGH: "var(--danger)", MEDIUM: "var(--furnace)", LOW: "var(--ink-mute)" };
+const SEVERITY_CHIP_CLASS = { ALL: "chip-info", HIGH: "chip-bad", MEDIUM: "chip-warn", LOW: "chip-neutral" };
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: batches, loading, error } = useFetch(() => api.listBatches(), []);
@@ -29,8 +33,35 @@ export default function Dashboard() {
   const [investigatingId, setInvestigatingId] = useState(null);
   const [investigateError, setInvestigateError] = useState(null);
 
+  const [insight, setInsight] = useState(null);
+  const [insightLoading, setInsightLoading] = useState(true);
+  const [generatingInsights, setGeneratingInsights] = useState(false);
+  const [insightError, setInsightError] = useState(null);
+  const [severityFilter, setSeverityFilter] = useState("ALL");
+
+  useEffect(() => {
+    api.getLatestInsights()
+      .then(setInsight)
+      .catch((e) => { if (e.status !== 404) setInsightError(e); })
+      .finally(() => setInsightLoading(false));
+  }, []);
+
   if (loading || equipLoading || camLoading || auditLoading) return <p className="loading">Loading dashboard…</p>;
   if (error) return <p className="error-box">Failed to load batches: {error.message}</p>;
+
+  async function generateInsights() {
+    setGeneratingInsights(true);
+    setInsightError(null);
+    try {
+      const result = await api.generateInsights();
+      setInsight(result);
+      setSeverityFilter("ALL");
+    } catch (e) {
+      setInsightError(e);
+    } finally {
+      setGeneratingInsights(false);
+    }
+  }
 
   async function investigate(batchId) {
     setInvestigatingId(batchId);
@@ -153,6 +184,113 @@ export default function Dashboard() {
             </div>
           );
         })}
+      </div>
+
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <h3 style={{ margin: 0 }}>AI Insights &amp; Reasoning</h3>
+            <InfoTooltip title="AI Insights & Reasoning" align="right">
+              An Azure OpenAI-generated narrative over current plant telemetry, grounded in the same batch, equipment,
+              camera, and audit data as the widgets below. Generated on demand (not on every page load — each run is a
+              live model call) — use Regenerate once new data has come in.
+            </InfoTooltip>
+          </span>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {insight?.findings?.length > 0 && (
+              <div style={{ display: "flex", gap: 6 }}>
+                {SEVERITY_LEVELS.map((level) => {
+                  const count = level === "ALL" ? insight.findings.length
+                    : insight.findings.filter((f) => f.severity === level).length;
+                  const disabled = level !== "ALL" && count === 0;
+                  const active = severityFilter === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      className={`chip ${active ? SEVERITY_CHIP_CLASS[level] : "chip-neutral"}`}
+                      style={{ opacity: disabled ? 0.35 : 1 }}
+                      disabled={disabled}
+                      onClick={() => setSeverityFilter(level)}
+                    >
+                      {level} {count}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <button className="btn btn-primary" disabled={generatingInsights || insightLoading} onClick={generateInsights}>
+              {generatingInsights ? "Generating…" : insight ? "Regenerate Insights" : "Generate Insights"}
+            </button>
+          </div>
+        </div>
+
+        {insightError && (
+          <div className={`alert ${insightError.status === 503 ? "alert-warn" : "alert-bad"}`} style={{ marginBottom: insight ? 14 : 0 }}>
+            {insightError.status === 503
+              ? `AI insights unavailable right now — try again shortly. (${insightError.message})`
+              : `Failed to generate insights: ${insightError.message}`}
+          </div>
+        )}
+
+        {insight && (
+          <>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: "var(--ink)" }}>{insight.summary}</p>
+              <span
+                className={`chip ${insight.confidenceBand === "HIGH" ? "chip-good" : insight.confidenceBand === "MEDIUM" ? "chip-warn" : "chip-neutral"}`}
+                style={{ flex: "none" }}
+              >
+                {insight.confidenceBand} CONFIDENCE
+              </span>
+            </div>
+
+            <div>
+              {insight.findings
+                .filter((f) => severityFilter === "ALL" || f.severity === severityFilter)
+                .map((f, i, arr) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex", gap: 12, padding: "14px 0",
+                      borderBottom: i < arr.length - 1 ? "1px solid var(--line-soft)" : "none",
+                    }}
+                  >
+                    <div style={{ width: 3, borderRadius: 2, background: SEVERITY_COLOR[f.severity] || "var(--ink-mute)", flex: "none" }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                        <b style={{ fontSize: 13 }}>{f.title}</b>
+                        <span
+                          className="mono"
+                          style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", color: SEVERITY_COLOR[f.severity] || "var(--ink-mute)" }}
+                        >
+                          {f.severity}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12.5, color: "var(--ink-soft)", margin: "0 0 6px", lineHeight: 1.55 }}>{f.reasoning}</p>
+                      {f.evidence?.length > 0 && (
+                        <p style={{ fontSize: 11, color: "var(--ink-mute)", margin: "0 0 6px" }}>
+                          <span style={{ fontWeight: 600 }}>Evidence:</span> {f.evidence.join(" · ")}
+                        </p>
+                      )}
+                      {f.recommendedFocus && (
+                        <p style={{ fontSize: 11.5, color: "var(--accent-ink)", margin: 0, fontWeight: 600 }}>→ {f.recommendedFocus}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <p className="mono" style={{ fontSize: 10.5, color: "var(--ink-mute)", margin: "12px 0 0" }}>
+              Generated {new Date(insight.generatedAt).toLocaleString()} · {insight.model}
+            </p>
+          </>
+        )}
+
+        {!insight && !insightLoading && !generatingInsights && !insightError && (
+          <p style={{ fontSize: 12.5, color: "var(--ink-mute)", margin: 0 }}>No AI insights generated yet.</p>
+        )}
       </div>
 
       <div className="grid cols-2" style={{ marginBottom: 18 }}>

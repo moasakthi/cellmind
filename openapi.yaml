@@ -27,6 +27,7 @@ tags:
   - name: Cameras
   - name: Investigations
   - name: Recommendations
+  - name: AI Insights
   - name: Simulations
   - name: Retraining
   - name: Taxonomy
@@ -342,6 +343,33 @@ paths:
               schema: { $ref: '#/components/schemas/Recommendation' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /investigations/{investigationId}/recommendation:
+    post:
+      tags: [Recommendations]
+      summary: Generate (or regenerate) an AI-driven recommendation for an investigation
+      description: >-
+        Calls Azure OpenAI to reason over the investigation's agent pipeline results and produce a
+        root-cause narrative plus ranked corrective actions. Idempotent — if a recommendation already
+        exists for this investigation, it is regenerated in place (same recommendationId).
+      parameters:
+        - $ref: '#/components/parameters/InvestigationIdParam'
+        - name: actingUserId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Recommendation generated or regenerated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Recommendation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503':
+          description: AI recommendation engine unavailable — investigation data is unaffected (BR-11-style fail-open)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /recommendations/{recommendationId}/approve:
     post:
       tags: [Recommendations]
@@ -362,6 +390,48 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409':
           description: Requester and approver must be distinct users (BR-10)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /insights:
+    post:
+      tags: [AI Insights]
+      summary: Generate a plant-wide AI insights snapshot from current telemetry
+      description: >-
+        Calls Azure OpenAI over current batch, equipment, camera, and audit data to produce an
+        evidence-grounded narrative and ranked findings. Persisted — manually triggered rather than
+        run on every dashboard load, since each call is a live model request.
+      parameters:
+        - name: actingUserId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Insight generated and persisted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiInsight' }
+        '503':
+          description: AI insights unavailable (BR-11-style fail-open)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /insights/latest:
+    get:
+      tags: [AI Insights]
+      summary: Most recently generated AI insight snapshot
+      description: Pure DB read — does not call Azure OpenAI. Safe to call on every dashboard load.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiInsight' }
+        '404':
+          description: No AI insight has been generated yet
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -927,7 +997,33 @@ components:
         filteredActions:
           type: array
           items: { $ref: '#/components/schemas/ActionCandidate' }
+        reasoning: { type: string, nullable: true, description: "Root-cause narrative. AI-generated recommendations (authoredBy: system:AIRecommendationAgent) always populate this; statically-authored ones may." }
         createdAt: { type: string, format: date-time }
+
+    AiFinding:
+      type: object
+      properties:
+        title: { type: string }
+        severity: { $ref: '#/components/schemas/Severity' }
+        reasoning: { type: string }
+        evidence:
+          type: array
+          items: { type: string }
+        recommendedFocus: { type: string }
+
+    AiInsight:
+      type: object
+      properties:
+        insightId: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        generatedAt: { type: string, format: date-time }
+        generatedBy: { type: string, nullable: true }
+        model: { type: string, example: "synapt-dev-gpt-5.4-mini" }
+        summary: { type: string }
+        confidenceBand: { $ref: '#/components/schemas/ConfidenceBand' }
+        findings:
+          type: array
+          items: { $ref: '#/components/schemas/AiFinding' }
 
     ApprovalDecisionRequest:
       type: object

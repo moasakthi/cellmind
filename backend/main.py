@@ -9,10 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
+from ai_bridge import AIUnavailableError, current_model, generate_dashboard_insights, generate_recommendation
 from database import Base, engine, get_db
 from ml_bridge import classify
 from models import (
-    AuditLogEntry, AutonomyConfig, Batch, Camera, Cell, DefectTaxonomyEntry,
+    AiInsight, AuditLogEntry, AutonomyConfig, Batch, Camera, Cell, DefectTaxonomyEntry,
     Equipment, Investigation, ModelVersion, ProcessRecord, Recommendation,
     RetrainingRun, Role, SafetyConstraint, TaxonomyVersion, User,
 )
@@ -440,6 +441,88 @@ def get_recommendation(investigation_id: str, db: Session = Depends(get_db)):
     return row_to_dict(rec)
 
 
+def _referenced_equipment_ids(agents: dict) -> set:
+    ids = set()
+    for agent in agents.values():
+        for ev in agent.get("evidence", []):
+            if ev.get("sourceType") == "equipment":
+                ids.add(ev["sourceRef"])
+        result = agent.get("result") or {}
+        for anomaly in result.get("anomalies", []) if isinstance(result, dict) else []:
+            if "equipmentId" in anomaly:
+                ids.add(anomaly["equipmentId"])
+    return ids
+
+
+@app.post("/investigations/{investigation_id}/recommendation")
+def generate_investigation_recommendation(investigation_id: str,
+                                           acting_user_id: Optional[str] = Query(None, alias="actingUserId"),
+                                           db: Session = Depends(get_db)):
+    inv = db.get(Investigation, investigation_id)
+    if not inv:
+        raise HTTPException(404, "investigation not found")
+    batch = db.get(Batch, inv.batch_id)
+    if not batch:
+        raise HTTPException(404, "batch not found")
+    acting = acting_user_id or "u-jalvarez"
+
+    cell = db.get(Cell, inv.cell_id) if inv.cell_id else None
+    taxonomy_entry = db.get(DefectTaxonomyEntry, cell.taxonomy_id) if cell and cell.taxonomy_id else None
+    equipment_ids = _referenced_equipment_ids(inv.agents)
+    equipment_rows = (db.query(Equipment).filter(Equipment.equipment_id.in_(equipment_ids)).all()
+                       if equipment_ids else [])
+
+    context = {
+        "batch": {"batchId": batch.batch_id, "lineId": batch.line_id, "yieldPct": batch.yield_pct,
+                  "defectRatePct": batch.defect_rate, "riskLevel": batch.risk_level},
+        "agents": inv.agents,
+        "taxonomyCategory": taxonomy_entry.category if taxonomy_entry else None,
+        "taxonomySuggestedAction": taxonomy_entry.suggested_action if taxonomy_entry else None,
+        "equipment": [{"equipmentId": e.equipment_id, "equipmentType": e.equipment_type,
+                        "defectRatePct": round(100 * e.defective_units / e.units_produced, 1)
+                                          if e.units_produced else 0} for e in equipment_rows],
+    }
+
+    try:
+        result = generate_recommendation(context)
+    except AIUnavailableError as e:
+        raise HTTPException(503, f"AI recommendation engine unavailable: {e}")
+
+    autonomy_cfg = db.get(AutonomyConfig, batch.line_id)
+    autonomy_level = autonomy_cfg.autonomy_level if autonomy_cfg else "A"
+
+    ranked_actions = [
+        {"actionId": f"act-{uuid4().hex[:6]}", "rank": i + 1, "title": a.get("title", "Untitled action"),
+         "cost": a.get("cost", "Medium"), "expectedImprovementPct": a.get("expectedImprovementPct", 0),
+         "downtimeHours": a.get("downtimeHours", 0), "riskScore": a.get("riskScore", 0.2),
+         "preSelected": i == 0 and autonomy_level == "B", "filtered": False, "filterReason": None}
+        for i, a in enumerate(result.get("actions", [])[:4])
+    ]
+    simulation = compute_simulation(batch, reduce=True)
+    reasoning = result.get("rootCauseNarrative")
+
+    existing = db.query(Recommendation).filter(Recommendation.investigation_id == investigation_id).first()
+    if existing:
+        existing.authored_by = "system:AIRecommendationAgent"
+        existing.autonomy_level = autonomy_level
+        existing.ranked_actions = ranked_actions
+        existing.filtered_actions = []
+        existing.simulation = simulation
+        existing.reasoning = reasoning
+        existing.created_at = now_iso()
+        rec = existing
+    else:
+        rec = Recommendation(
+            recommendation_id=f"rec-{uuid4().hex[:6]}", investigation_id=investigation_id,
+            authored_by="system:AIRecommendationAgent", autonomy_level=autonomy_level,
+            ranked_actions=ranked_actions, filtered_actions=[], simulation=simulation,
+            approval=None, reasoning=reasoning, created_at=now_iso(),
+        )
+    db.add(rec); db.commit(); db.refresh(rec)
+    audit(db, acting, "generate_ai_recommendation", "recommendation", rec.recommendation_id)
+    return row_to_dict(rec)
+
+
 @app.post("/recommendations/{recommendation_id}/approve")
 def approve_recommendation(recommendation_id: str, payload: ApprovalDecisionRequest, db: Session = Depends(get_db)):
     rec = db.get(Recommendation, recommendation_id)
@@ -463,24 +546,98 @@ def approve_recommendation(recommendation_id: str, payload: ApprovalDecisionRequ
     return approval
 
 
+# ---------- AI Insights ----------
+
+@app.post("/insights")
+def generate_insights(acting_user_id: Optional[str] = Query(None, alias="actingUserId"),
+                       db: Session = Depends(get_db)):
+    acting = acting_user_id or "u-jalvarez"
+
+    batches = db.query(Batch).all()
+    equipment_rows = db.query(Equipment).all()
+    cameras = db.query(Camera).all()
+    recent_audit = db.query(AuditLogEntry).order_by(AuditLogEntry.timestamp.desc()).limit(8).all()
+
+    risk_counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0}
+    for b in batches:
+        risk_counts[b.risk_level] = risk_counts.get(b.risk_level, 0) + 1
+
+    total_defects = sum(e.defective_units for e in equipment_rows) or 1
+    equipment_summary = [
+        {"equipmentId": e.equipment_id,
+         "defectRatePct": round(100 * e.defective_units / e.units_produced, 1) if e.units_produced else 0,
+         "shareOfDefectsPct": round(100 * e.defective_units / total_defects, 1)}
+        for e in equipment_rows
+    ]
+
+    lines = {}
+    for b in batches:
+        lines.setdefault(b.line_id, []).append(b.defect_rate)
+    line_summary = [{"lineId": lid, "avgDefectRatePct": round(sum(rates) / len(rates), 1), "batchCount": len(rates)}
+                     for lid, rates in lines.items()]
+
+    cam_by_line = {}
+    for c in cameras:
+        cam_by_line.setdefault(c.line_id, []).append(c.status)
+    offline_lines = [lid for lid, statuses in cam_by_line.items() if statuses and all(s == "OFFLINE" for s in statuses)]
+
+    context = {
+        "batches": [{"batchId": b.batch_id, "lineId": b.line_id, "yieldPct": b.yield_pct,
+                     "defectRatePct": b.defect_rate, "riskLevel": b.risk_level} for b in batches],
+        "riskDistribution": risk_counts,
+        "defectRateByLine": line_summary,
+        "equipmentDefectContribution": equipment_summary,
+        "cameraFleet": {
+            "counts": {s: sum(1 for c in cameras if c.status == s) for s in ("ONLINE", "DEGRADED", "OFFLINE")},
+            "linesWithAllCamerasOffline": offline_lines,
+        },
+        "recentActivity": [{"actor": a.actor, "action": a.action, "targetId": a.target_id, "timestamp": a.timestamp}
+                            for a in recent_audit],
+    }
+
+    try:
+        result = generate_dashboard_insights(context)
+    except AIUnavailableError as e:
+        raise HTTPException(503, f"AI insights unavailable: {e}")
+
+    insight = AiInsight(
+        insight_id=f"ins-{uuid4().hex[:8]}", tenant_id="t1", generated_at=now_iso(), generated_by=acting,
+        model=current_model(), summary=result.get("summary", ""),
+        confidence_band=result.get("confidenceBand", "LOW"), findings=result.get("findings", []),
+    )
+    db.add(insight); db.commit(); db.refresh(insight)
+    audit(db, acting, "generate_ai_insights", "ai_insight", insight.insight_id)
+    return row_to_dict(insight)
+
+
+@app.get("/insights/latest")
+def latest_insights(db: Session = Depends(get_db)):
+    insight = db.query(AiInsight).order_by(AiInsight.generated_at.desc()).first()
+    if not insight:
+        raise HTTPException(404, "no AI insights generated yet")
+    return row_to_dict(insight)
+
+
 # ---------- Simulations ----------
+
+def compute_simulation(batch: Batch, reduce: bool = True) -> dict:
+    current = batch.defect_rate
+    improvement = round(min(current * 0.35, max(current - 0.2, 0)), 1) * (1 if reduce else -1)
+    predicted = round(max(current - improvement, 0), 1)
+    return {
+        "batchId": batch.batch_id, "currentDefectRatePct": current, "predictedDefectRatePct": predicted,
+        "predictedImprovementPts": round(current - predicted, 1),
+        "disclaimer": "Predicted outcome — not a guaranteed result (FR-10).",
+    }
+
 
 @app.post("/simulations")
 def run_simulation(payload: SimulationRequest, db: Session = Depends(get_db)):
     batch = db.get(Batch, payload.batch_id)
     if not batch:
         raise HTTPException(404, "batch not found")
-
-    current = batch.defect_rate
-    direction = -1 if "reduce" in payload.adjustment.lower() or "decrease" in payload.adjustment.lower() else 1
-    improvement = round(min(current * 0.35, max(current - 0.2, 0)), 1) * (1 if direction < 0 else -1)
-    predicted = round(max(current - improvement, 0), 1)
-
-    return {
-        "batchId": batch.batch_id, "currentDefectRatePct": current, "predictedDefectRatePct": predicted,
-        "predictedImprovementPts": round(current - predicted, 1),
-        "disclaimer": "Predicted outcome — not a guaranteed result (FR-10).",
-    }
+    reduce = "reduce" in payload.adjustment.lower() or "decrease" in payload.adjustment.lower()
+    return compute_simulation(batch, reduce=reduce)
 
 
 # ---------- Retraining ----------

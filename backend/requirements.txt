@@ -9,3 +9,7 @@ python-multipart>=0.0.9
 torch>=2.12
 torchvision>=0.27
 pillow
+
+# ai_bridge.py — Azure OpenAI-driven insights & recommendations
+openai>=1.0
+python-dotenv>=1.0

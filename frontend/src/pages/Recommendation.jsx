@@ -11,14 +11,17 @@ async function loadRecommendation(investigationId) {
     if (!items.length) return null;
     invId = items[0].investigationId;
   }
+  const inv = await api.getInvestigation(invId);
+  let rec;
   try {
-    const rec = await api.getRecommendation(invId);
-    const inv = await api.getInvestigation(invId);
-    return { ...rec, batchId: inv.batchId };
+    rec = await api.getRecommendation(invId);
   } catch (e) {
-    if (e.status === 404) return null;
-    throw e;
+    if (e.status !== 404) throw e;
+    // No recommendation yet — generate one via Azure OpenAI on the spot.
+    // A 503 here (AI unavailable) is intentionally left to propagate.
+    rec = await api.generateRecommendation(invId);
   }
+  return { ...rec, batchId: inv.batchId };
 }
 
 const SIM_PARAMETERS = [
@@ -37,10 +40,17 @@ export default function Recommendation() {
   const [simDirection, setSimDirection] = useState("reduce");
   const [sim, setSim] = useState(null);
   const [simBusy, setSimBusy] = useState(false);
+  const [regenBusy, setRegenBusy] = useState(false);
+  const [regenMsg, setRegenMsg] = useState(null);
   const canApprove = has("approve_quality_action") || has("approve_process_action") || has("approve_equipment_action");
 
-  if (loading) return <p className="loading">Loading recommendation…</p>;
-  if (error) return <p className="error-box">Failed to load recommendation: {error.message}</p>;
+  if (loading) return <p className="loading">Loading recommendation… (generating via AI if none exists yet — this can take a few seconds)</p>;
+  if (error) {
+    if (error.status === 503) {
+      return <div className="alert alert-warn" style={{ marginTop: 20 }}>AI recommendation engine unavailable right now — try again shortly. ({error.message})</div>;
+    }
+    return <p className="error-box">Failed to load recommendation: {error.message}</p>;
+  }
   if (!rec) {
     return (
       <p className="page-sub">
@@ -80,12 +90,43 @@ export default function Recommendation() {
     }
   }
 
+  async function regenerate() {
+    setRegenBusy(true);
+    setRegenMsg(null);
+    try {
+      await api.generateRecommendation(rec.investigationId);
+      setRegenMsg({ ok: true, text: "Recommendation regenerated." });
+      reload();
+    } catch (e) {
+      setRegenMsg({ ok: false, text: e.status === 503 ? "AI recommendation engine unavailable — try again shortly." : e.message });
+    } finally {
+      setRegenBusy(false);
+    }
+  }
+
   return (
     <>
       <h1 className="page-title">Recommendation &amp; Approval</h1>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
         <span className="chip chip-info">AUTONOMY: LEVEL {rec.autonomyLevel} — AUTO-SUGGEST</span>
+        {rec.authoredBy === "system:AIRecommendationAgent" && <span className="chip chip-neutral">AI-GENERATED</span>}
+        <button className="btn btn-secondary" disabled={regenBusy} onClick={regenerate} style={{ marginLeft: "auto" }}>
+          {regenBusy ? "Regenerating…" : "Regenerate with AI"}
+        </button>
       </div>
+
+      {regenMsg && (
+        <div className={`alert ${regenMsg.ok ? "alert-info" : "alert-bad"}`} style={{ marginBottom: 16 }}>
+          {regenMsg.text}
+        </div>
+      )}
+
+      {rec.reasoning && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3>AI Reasoning</h3>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: "var(--ink-soft)" }}>{rec.reasoning}</p>
+        </div>
+      )}
 
       <div className="grid cols-3" style={{ marginBottom: 16 }}>
         {rec.rankedActions.map((a) => (

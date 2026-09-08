@@ -375,6 +375,13 @@ def seed(db):
         rec_id = f"rec-{uuid4().hex[:6]}"
         if approval:
             approval["targetId"] = rec_id
+        reasoning = (
+            f"{worst_equipment['equipmentId']} shows a {rate}% defect rate, the highest of any equipment "
+            f"referenced in this investigation's process data. Combined with the {c['className'].lower()} "
+            f"pattern observed on cell {c['cellId']} and the above-baseline firing temperature recorded for "
+            f"this batch, {worst_equipment['equipmentId']} process variation is the probable contributing "
+            f"factor (BR-04: presented as probable, not proven)."
+        )
         db.add(Recommendation(
             recommendation_id=rec_id, investigation_id=inv_id, authored_by="system:RootCauseAgent",
             autonomy_level="B", ranked_actions=ranked, filtered_actions=filtered,
@@ -382,7 +389,7 @@ def seed(db):
                         "predictedDefectRatePct": round(batch["defectRate"] * 0.7, 1),
                         "predictedImprovementPts": round(batch["defectRate"] * 0.3, 1),
                         "disclaimer": "Predicted outcome — not a guaranteed result (FR-10)."},
-            approval=approval, created_at=days_ago(10 - i),
+            approval=approval, reasoning=reasoning, created_at=days_ago(10 - i),
         ))
 
     # ---- Autonomy config & safety constraints ----

@@ -50,9 +50,14 @@ export const api = {
   getInvestigation: (id) => request(`/investigations/${id}`),
   createInvestigation: (payload) => request("/investigations", { method: "POST", body: JSON.stringify(payload) }),
   getRecommendation: (investigationId) => request(`/recommendations/${investigationId}`),
+  generateRecommendation: (investigationId) =>
+    request(`/investigations/${investigationId}/recommendation`, { method: "POST" }),
   approveRecommendation: (id, payload) =>
     request(`/recommendations/${id}/approve`, { method: "POST", body: JSON.stringify(payload) }),
   runSimulation: (payload) => request("/simulations", { method: "POST", body: JSON.stringify(payload) }),
+
+  generateInsights: () => request("/insights", { method: "POST" }),
+  getLatestInsights: () => request("/insights/latest"),
 
   listRuns: () => request("/retraining/runs"),
   approveRun: (id, payload) =>
