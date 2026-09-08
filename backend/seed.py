@@ -36,6 +36,41 @@ CLASSES = [
     ("Snow-Covered", "snow_covered", "MEDIUM", (0.30, 0.60)),
 ]
 
+# Per-taxonomy action options (title, cost tier, base improvement %, downtime hrs, base risk, action type).
+# Rank 0 mirrors the taxonomy's own suggestedAction; later ranks escalate in cost/impact/risk.
+TAXONOMY_ACTIONS = {
+    "bird_drop": [
+        ("Schedule panel cleaning", "Low", 3.0, 0, 0.08, "clean"),
+        ("Install automated cleaning schedule", "Medium", 5.5, 1, 0.15, "maintenance"),
+        ("Adjust panel tilt to reduce fouling", "High", 6.0, 4, 0.25, "adjust_parameter"),
+    ],
+    "dusty": [
+        ("Schedule panel cleaning", "Low", 2.5, 0, 0.07, "clean"),
+        ("Install automated cleaning schedule", "Medium", 4.5, 1, 0.14, "maintenance"),
+        ("Adjust panel tilt to reduce fouling", "High", 5.0, 4, 0.22, "adjust_parameter"),
+    ],
+    "electrical_damage": [
+        ("De-energize line and inspect wiring/bypass diodes", "Medium", 4.8, 2, 0.22, "inspect"),
+        ("Replace bypass diode / connector", "High", 6.5, 6, 0.32, "replace_component"),
+        ("Full electrical audit of string", "High", 5.5, 8, 0.30, "inspect"),
+    ],
+    "physical_damage": [
+        ("Inspect for structural glass/frame damage", "Medium", 4.0, 2, 0.20, "inspect"),
+        ("Replace damaged component", "High", 7.0, 8, 0.35, "replace_component"),
+        ("Review handling procedure / add protective barrier", "Low", 2.0, 0, 0.10, "adjust_parameter"),
+    ],
+    "snow_covered": [
+        ("Monitor; no corrective action needed until snow clears", "Low", 0.5, 0, 0.02, "monitor"),
+        ("Schedule manual snow removal", "Medium", 3.0, 1, 0.12, "maintenance"),
+        ("Install heating element to prevent snow buildup", "High", 5.0, 6, 0.28, "replace_component"),
+    ],
+}
+DEFAULT_ACTIONS = [
+    ("Adjust firing profile", "Low", 2.4, 0, 0.10, "adjust_parameter"),
+    ("Perform equipment maintenance", "Medium", 4.1, 2, 0.20, "maintenance"),
+    ("Replace component", "High", 4.8, 8, 0.35, "replace_component"),
+]
+
 NEW_TAXONOMY_ENTRIES = [
     {"taxonomyId": "bird_drop", "category": "Bird dropping", "subtype": "Surface soiling",
      "severity": "MEDIUM", "rootCauseFamily": "Environmental fouling",
@@ -300,17 +335,15 @@ def seed(db):
     print("Seeding investigations & recommendations ...")
     defective = [c for c in all_cells if c["taxonomySlug"] or c["className"] != "Clean"]
     sample_cells = RNG.sample(defective, k=min(6, len(defective)))
-    action_templates = [
-        ("Adjust firing profile", "Low", 2.4, 0, 0.10),
-        ("Perform equipment maintenance", "Medium", 4.1, 2, 0.20),
-        ("Replace component", "High", 4.8, 8, 0.35),
-    ]
+    taxonomy_by_id = {t["taxonomyId"]: t for t in existing_taxonomy + NEW_TAXONOMY_ENTRIES}
 
     for i, c in enumerate(sample_cells):
         batch = c["batch"]
         inv_id = f"inv-{uuid4().hex[:8]}"
         worst_equipment = max(equipment, key=lambda e: e["defectiveUnits"] / e["unitsProduced"])
         rate = round(100 * worst_equipment["defectiveUnits"] / worst_equipment["unitsProduced"], 1)
+        taxonomy_entry = taxonomy_by_id.get(c["taxonomySlug"])
+        root_cause_family = taxonomy_entry["rootCauseFamily"] if taxonomy_entry else f"{worst_equipment['equipmentId']} process variation"
 
         agents = {
             "inspection": {
@@ -343,28 +376,45 @@ def seed(db):
             },
             "rootCause": {
                 "agentName": "RootCauseAgent",
-                "result": {"probableCause": f"{worst_equipment['equipmentId']} process variation",
-                           "equipmentRate": rate, "equipmentShare": rate},
+                "result": {"probableCause": root_cause_family, "equipmentRate": rate, "equipmentShare": rate},
                 "confidence": 0.9, "confidenceBand": "HIGH",
                 "evidence": [{"sourceType": "equipment", "sourceRef": worst_equipment["equipmentId"],
-                               "description": f"Defect rate {rate}% traced to {worst_equipment['equipmentId']}."}],
+                               "description": f"Defect rate {rate}% at {worst_equipment['equipmentId']} "
+                                              f"consistent with {root_cause_family}."}],
                 "dataGaps": [], "oodFlag": False,
             },
         }
         db.add(Investigation(investigation_id=inv_id, batch_id=batch["batchId"], cell_id=c["cellId"],
                               status="COMPLETE", agents=agents, created_at=days_ago(10 - i)))
 
+        action_source = TAXONOMY_ACTIONS.get(c["taxonomySlug"], DEFAULT_ACTIONS)
+        improvement_factor = 0.6 + 0.8 * c["defectProbability"]
+        risk_factor = 0.7 + 0.6 * (1 - c["confidence"])
         ranked = [
             {"actionId": f"act-{uuid4().hex[:6]}", "rank": rank + 1, "title": title, "cost": cost,
-             "expectedImprovementPct": pct, "downtimeHours": dt, "riskScore": risk,
+             "expectedImprovementPct": round(pct * improvement_factor, 1), "downtimeHours": dt,
+             "riskScore": round(risk * risk_factor, 2), "actionType": action_type,
              "preSelected": rank == 0, "filtered": False, "filterReason": None}
-            for rank, (title, cost, pct, dt, risk) in enumerate(action_templates)
+            for rank, (title, cost, pct, dt, risk, action_type) in enumerate(action_source)
         ]
         filtered = []
         if i == 0:
-            blocked = ranked.pop()
-            blocked["filtered"], blocked["filterReason"] = True, "Replace-component action blocked outside a declared maintenance window."
-            filtered.append(blocked)
+            replace_idx = next((idx for idx, a in enumerate(ranked) if a["actionType"] == "replace_component"), None)
+            if replace_idx is not None:
+                blocked = ranked.pop(replace_idx)
+                blocked["filtered"], blocked["filterReason"] = True, (
+                    f"{blocked['title']} blocked outside a declared maintenance window (safety constraint sc-001)."
+                )
+                filtered.append(blocked)
+                for idx, a in enumerate(ranked):
+                    a["rank"], a["preSelected"] = idx + 1, idx == 0
+
+        top_action = ranked[0] if ranked else None
+        predicted_defect_rate = (
+            round(max(batch["defectRate"] - top_action["expectedImprovementPct"], 0.1), 1)
+            if top_action else round(batch["defectRate"] * 0.7, 1)
+        )
+        predicted_improvement_pts = round(batch["defectRate"] - predicted_defect_rate, 1)
 
         approval = None
         if i % 2 == 0:
@@ -379,8 +429,8 @@ def seed(db):
             recommendation_id=rec_id, investigation_id=inv_id, authored_by="system:RootCauseAgent",
             autonomy_level="B", ranked_actions=ranked, filtered_actions=filtered,
             simulation={"currentDefectRatePct": batch["defectRate"],
-                        "predictedDefectRatePct": round(batch["defectRate"] * 0.7, 1),
-                        "predictedImprovementPts": round(batch["defectRate"] * 0.3, 1),
+                        "predictedDefectRatePct": predicted_defect_rate,
+                        "predictedImprovementPts": predicted_improvement_pts,
                         "disclaimer": "Predicted outcome — not a guaranteed result (FR-10)."},
             approval=approval, created_at=days_ago(10 - i),
         ))
