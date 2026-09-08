@@ -4,12 +4,25 @@ AI-assisted solar cell/panel inspection platform: a FastAPI + SQLite backend, a 
 (Vite) frontend, and a standalone ML pipeline that trains an image classifier on solar
 panel fault photos.
 
+## Quick start (Windows / PowerShell)
+
+```
+.\scripts\dev.ps1            # starts backend (:8010) and frontend, each in its own window
+.\scripts\seed.ps1           # (re)build cellmind.db + sample images only
+.\scripts\train-model.ps1    # retrain the ml/ classifier from training_data/
+```
+
+See `scripts/` for the individual `start-backend.ps1` / `start-frontend.ps1` scripts if
+you'd rather run each piece by hand. All scripts install their own Python/npm
+dependencies on first run.
+
 ## Repo layout
 
 ```
 backend/          FastAPI + SQLAlchemy + SQLite API (the app's data layer)
 frontend/         React (Vite) UI, talks to the backend over HTTP
 ml/               Standalone training pipeline for the visual fault classifier
+scripts/          PowerShell runner scripts (dev.ps1, seed.ps1, train-model.ps1, ...)
 training_data/    Source images (Faulty_solar_panel/<class>/*.jpg) — gitignored
 BRD.MD, DDD.MD, SRS.MD, openapi.yaml   Product/design/requirements docs
 ```
