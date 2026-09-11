@@ -1,15 +1,9 @@
-﻿
+
 > cellmind-frontend@0.1.0 dev
 > vite --port 5173
 
 
-  VITE v5.4.21  ready in 3517 ms
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m1410[22m[2m[0m ms[22m
 
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-5:15:31 PM [vite] hmr update /src/pages/Inference.jsx
-5:15:37 PM [vite] hmr update /src/pages/Inference.jsx
-5:41:42 PM [vite] hmr update /src/pages/Inference.jsx
-5:41:51 PM [vite] hmr update /src/pages/Inference.jsx
-5:41:57 PM [vite] hmr update /src/pages/Inference.jsx
-5:42:42 PM [vite] hmr update /src/pages/Inference.jsx
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
