@@ -65,3 +65,7 @@ training_data
 ml/artifacts/
 backend/cellmind.db
 backend/static/
+
+# raw screen recordings — compress before committing (see CellMind_Demo_Video.mp4)
+Screen Recording*.mp4
+~$*.pptx
